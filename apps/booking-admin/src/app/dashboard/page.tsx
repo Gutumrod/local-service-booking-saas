@@ -6,7 +6,7 @@ import {
   Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
   QrCode, UserPlus, FileText, ExternalLink, CalendarOff, Coffee, Save,
   Filter, Copy, MessageCircle, Send, Check, AlertTriangle, Trash2, Edit3, Lock,
-  Zap, HelpCircle, PackagePlus
+  Zap, HelpCircle, PackagePlus, Scissors
 } from 'lucide-react';
 
 interface Booking {
@@ -40,6 +40,22 @@ interface StaffMember {
   role: string;
   isActive: boolean;
 }
+
+interface ServiceItem {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  deposit: number;
+}
+
+const INITIAL_SERVICES: ServiceItem[] = [
+  { id: 'sv1', name: 'ตัดผมชายพรีเมียม + สระเซ็ต (Signature Haircut)', description: 'บริการตัดแต่งทรงผมอย่างประณีต พร้อมสระนวดผ่อนคลายและจัดทรงด้วยผลิตภัณฑ์นำเข้า', duration: 45, price: 350, deposit: 100 },
+  { id: 'sv2', name: 'ดัดวอลลุ่มสไตล์เกาหลี (Korean Down Perm)', description: 'กดผมด้านข้าง ล็อกทรงวอลลุ่มธรรมชาติ ดูแลเส้นผมด้วยทรีตเมนต์บำรุง', duration: 90, price: 1200, deposit: 300 },
+  { id: 'sv3', name: 'ทำสีผมพรีเมียม (Premium Hair Color)', description: 'ทำสีผมแฟชั่น/ปกปิดผมขาว พร้อมทรีตเมนต์เคลือบเงาป้องกันผมเสีย', duration: 120, price: 1800, deposit: 500 },
+  { id: 'sv4', name: 'สปาหนังศีรษะแบบล้ำลึก (Deep Scalp Treatment)', description: 'ดีท็อกซ์หนังศีรษะ ขจัดความมันและรังแค พร้อมนวดผ่อนคลายความเครียด', duration: 60, price: 790, deposit: 200 }
+];
 
 const INITIAL_BOOKINGS: Booking[] = [
   {
@@ -114,7 +130,17 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
   const [staffList, setStaffList] = useState<StaffMember[]>(INITIAL_STAFF);
   const [schedules, setSchedules] = useState<StaffSchedule[]>(INITIAL_SCHEDULES);
+  const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
   const [selectedSlipBooking, setSelectedSlipBooking] = useState<Booking | null>(null);
+
+  // Service Form State
+  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+  const [showServiceForm, setShowServiceForm] = useState(false);
+  const [serviceName, setServiceName] = useState('');
+  const [serviceDesc, setServiceDesc] = useState('');
+  const [serviceDuration, setServiceDuration] = useState(45);
+  const [servicePrice, setServicePrice] = useState(350);
+  const [serviceDeposit, setServiceDeposit] = useState(100);
 
   // Filter Bookings by Date View
   const [bookingFilter, setBookingFilter] = useState<'today' | 'upcoming' | 'all'>('all');
@@ -193,6 +219,58 @@ export default function AdminDashboard() {
     setHolidaysList(prev => [...prev, { date: specialHolidayDate, reason: specialHolidayReason || 'วันหยุดพิเศษร้านค้า' }]);
     setSpecialHolidayDate('');
     setSpecialHolidayReason('');
+  };
+
+  const handleOpenAddService = () => {
+    setEditingService(null);
+    setServiceName('');
+    setServiceDesc('');
+    setServiceDuration(45);
+    setServicePrice(350);
+    setServiceDeposit(100);
+    setShowServiceForm(true);
+  };
+
+  const handleOpenEditService = (sv: ServiceItem) => {
+    setEditingService(sv);
+    setServiceName(sv.name);
+    setServiceDesc(sv.description);
+    setServiceDuration(sv.duration);
+    setServicePrice(sv.price);
+    setServiceDeposit(sv.deposit);
+    setShowServiceForm(true);
+  };
+
+  const handleSaveService = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serviceName) return;
+
+    if (editingService) {
+      setServices(prev => prev.map(s => s.id === editingService.id ? {
+        ...s,
+        name: serviceName,
+        description: serviceDesc,
+        duration: serviceDuration,
+        price: servicePrice,
+        deposit: serviceDeposit
+      } : s));
+    } else {
+      const newSv: ServiceItem = {
+        id: `sv${services.length + 1}`,
+        name: serviceName,
+        description: serviceDesc || 'บริการคุณภาพสูงจากทางร้าน',
+        duration: serviceDuration,
+        price: servicePrice,
+        deposit: serviceDeposit
+      };
+      setServices(prev => [...prev, newSv]);
+    }
+
+    setShowServiceForm(false);
+  };
+
+  const handleDeleteService = (id: string) => {
+    setServices(prev => prev.filter(s => s.id !== id));
   };
 
   const triggerSaveNotice = () => {
@@ -662,37 +740,158 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 4: SERVICES MANAGER */}
+        {/* TAB 4: FULLY INTERACTIVE SERVICES MANAGER (UPDATED) */}
         {activeTab === 'services' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
               <div>
-                <h2 className="text-base font-bold text-white">จัดการรายการบริการ & ค่ามัดจำ</h2>
-                <p className="text-xs text-slate-400">เพิ่ม ลบ หรือแก้ไขราคาบริการและกำหนดยอดมัดจำ PromptPay</p>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Scissors className="w-5 h-5 text-emerald-400" />
+                  จัดการรายการบริการ & ยอดมัดจำ PromptPay (Service Management)
+                </h2>
+                <p className="text-xs text-slate-400">เพิ่ม ลบ หรือแก้ไขราคาบริการ ระยะเวลา และยอดเงินมัดจำที่จะนำไปแสดงในหน้าจองลูกค้า</p>
               </div>
-              <button className="bg-emerald-500 text-slate-950 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5">
+              <button
+                onClick={handleOpenAddService}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
+              >
                 <Plus className="w-4 h-4" />
                 เพิ่มบริการใหม่
               </button>
             </div>
 
+            {/* Service Form Modal / Dropdown */}
+            {showServiceForm && (
+              <form onSubmit={handleSaveService} className="bg-slate-950 border border-emerald-500/40 rounded-2xl p-5 space-y-4 shadow-2xl animate-fade-in">
+                <h3 className="font-bold text-sm text-emerald-400 flex items-center gap-2 border-b border-slate-800 pb-2">
+                  {editingService ? <Edit3 className="w-4 h-4 text-emerald-400" /> : <Plus className="w-4 h-4 text-emerald-400" />}
+                  {editingService ? 'แก้ไขรายการบริการ' : 'เพิ่มรายการบริการใหม่'}
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <label className="text-slate-300 block mb-1 font-semibold">ชื่อบริการ *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="เช่น ตัดผมชายพรีเมียม + สระเซ็ต"
+                      value={serviceName}
+                      onChange={(e) => setServiceName(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1 font-semibold">รายละเอียดบริการ</label>
+                    <input
+                      type="text"
+                      placeholder="อธิบายรายละเอียดสั้นๆ เพื่อให้ลูกค้าเข้าใจ"
+                      value={serviceDesc}
+                      onChange={(e) => setServiceDesc(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1 font-semibold">ระยะเวลาการให้บริการ (นาที) *</label>
+                    <input
+                      required
+                      type="number"
+                      min={15}
+                      step={15}
+                      value={serviceDuration}
+                      onChange={(e) => setServiceDuration(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 font-mono text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1 font-semibold">ราคาบริการทั้งหมด (บาท) *</label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      value={servicePrice}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setServicePrice(val);
+                        // Auto estimate 30% deposit
+                        setServiceDeposit(Math.round(val * 0.3));
+                      }}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1 font-semibold text-amber-400">ยอดเงินมัดจำ PromptPay (บาท) *</label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      value={serviceDeposit}
+                      onChange={(e) => setServiceDeposit(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-amber-500/40 rounded-xl px-3 py-2 font-mono text-amber-400 font-bold focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowServiceForm(false)}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md"
+                  >
+                    {editingService ? 'บันทึกการแก้ไข' : 'บันทึกบริการใหม่'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Service Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                <h3 className="font-semibold text-sm text-white mb-1">ตัดผมชายพรีเมียม + สระเซ็ต</h3>
-                <p className="text-xs text-slate-400 mb-3">ระยะเวลา 45 นาที • ราคา ฿350</p>
-                <div className="flex justify-between items-center text-xs border-t border-slate-800 pt-3">
-                  <span className="text-amber-400 font-medium">มัดจำล็อกคิว: ฿100</span>
-                  <button className="text-slate-400 hover:text-white underline">แก้ไข</button>
+              {services.map((sv) => (
+                <div key={sv.id} className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl p-5 space-y-3 transition-all">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-sm text-white">{sv.name}</h3>
+                      <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{sv.description}</p>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-mono">
+                      ฿{sv.price}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs border-t border-slate-800/80 pt-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-400 flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-500" /> {sv.duration} นาที</span>
+                      <span className="text-amber-400 font-semibold">มัดจำ: ฿{sv.deposit}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenEditService(sv)}
+                        className="text-slate-400 hover:text-emerald-400 p-1 rounded transition-all"
+                        title="แก้ไขบริการ"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteService(sv.id)}
+                        className="text-slate-500 hover:text-rose-400 p-1 rounded transition-all"
+                        title="ลบบริการ"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                <h3 className="font-semibold text-sm text-white mb-1">ดัดวอลลุ่มสไตล์เกาหลี</h3>
-                <p className="text-xs text-slate-400 mb-3">ระยะเวลา 90 นาที • ราคา ฿1,200</p>
-                <div className="flex justify-between items-center text-xs border-t border-slate-800 pt-3">
-                  <span className="text-amber-400 font-medium">มัดจำล็อกคิว: ฿300</span>
-                  <button className="text-slate-400 hover:text-white underline">แก้ไข</button>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
@@ -796,7 +995,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 6: OFFICIAL BILLING & SUBSCRIPTION (UPDATED EXACTLY TO KHUN FREE'S SPECIFICATION) */}
+        {/* TAB 6: OFFICIAL BILLING & SUBSCRIPTION */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             {/* Header Title */}
@@ -974,7 +1173,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* SINGLE GATEWAY ARCHITECTURE NOTE (STRIPE SINGLE PROVIDER STANDARD) */}
+            {/* SINGLE GATEWAY ARCHITECTURE NOTE */}
             <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 text-left space-y-3">
               <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
