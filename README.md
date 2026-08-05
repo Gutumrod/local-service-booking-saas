@@ -1,6 +1,7 @@
 # 🚀 Local Service Booking & LINE Automation SaaS
 
 > **Official GitHub Repository:** [https://github.com/Gutumrod/local-service-booking-saas](https://github.com/Gutumrod/local-service-booking-saas)  
+> **Live Supabase Project URL:** `https://gyleqrjdzwwlqierdwcy.supabase.co`  
 > **Master Product Specification (SSOT):** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)  
 > **Phase 1 Implementation Brief:** [`BRIEF_PHASE1_AGY.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/BRIEF_PHASE1_AGY.md)  
 > **Official Business Model:** [`OFFICIAL_BUSINESS_MODEL.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/OFFICIAL_BUSINESS_MODEL.md)
@@ -16,7 +17,7 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 3. 🏆 **[`OFFICIAL_BUSINESS_MODEL.md`](OFFICIAL_BUSINESS_MODEL.md):** เอกสารแผนธุรกิจและสถาปัตยกรรมระบบฉบับสมบูรณ์ 100%
 4. 💰 **[`PRICING_SPEC.md`](PRICING_SPEC.md):** ข้อกำหนดราคา สิทธิแพ็กเกจ (5/5/10 ช่าง) และแพ็กเกจเติมคิวเสริม
 5. 🗺️ **[`ROADMAP_V2_V4.md`](ROADMAP_V2_V4.md):** แผนที่การดำเนินงานโครงการ V2 - V4
-6. 🛡️ **[`ARCHITECTURE_SECURITY_STANDARD.md`](ARCHITECTURE_SECURITY_STANDARD.md):** มาตรฐานสถาปัตยกรรมและความปลอดภัย (Supabase RLS & Central LINE Bot)
+6. 🛡️ **[`ARCHITECTURE_SECURITY_STANDARD.md`](ARCHITECTURE_SECURITY_STANDARD.md):** มาตรฐานสถาปัตยกรรมและความปลอดภัย (Supabase Live Project `https://gyleqrjdzwwlqierdwcy.supabase.co`)
 
 ---
 
@@ -34,7 +35,7 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 - **Consumer Web App (`apps/booking-consumer`):** Mobile-first customer booking portal + LINE messaging auto-link binding.
 - **Store Owner Dashboard (`apps/booking-admin`):** Admin panel for managing bookings, staff schedules, deposit verification, and billing.
-- **Database & Auth (`supabase/`):** Multi-tenant PostgreSQL database with Row-Level Security (RLS), Postgres Range Exclusion Constraints, and custom RPCs.
+- **Database & Auth (`supabase/`):** Multi-tenant PostgreSQL database (`https://gyleqrjdzwwlqierdwcy.supabase.co`) with Row-Level Security (RLS), Postgres Range Exclusion Constraints, and custom RPCs.
 
 ---
 
