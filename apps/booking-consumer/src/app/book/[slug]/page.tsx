@@ -71,27 +71,10 @@ export default function BookingPage() {
   const [savedQrNotice, setSavedQrNotice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [showFlexModal, setShowFlexModal] = useState(false);
 
   const promptpayNumber = '081-234-5678';
   const lineOaUrl = 'https://line.me/R/ti/p/@goodcutsbarber';
   const bookingCode = 'BK-1042';
-
-  const flexCardData = useMemo(() => {
-    return createCustomerBookingFlex({
-      bookingId: bookingCode,
-      shopName: slug.replace(/-/g, ' ').toUpperCase(),
-      customerName: customerName || 'คุณสมชาย ใจดี',
-      phone: customerPhone || '081-234-5678',
-      serviceName: selectedService?.name || 'ตัดผมชายพรีเมียม',
-      staffName: selectedStaff?.nickname || 'ช่างเอก',
-      date: selectedDate,
-      time: selectedTime,
-      depositAmount: selectedService?.deposit || 100,
-      totalPrice: selectedService?.price || 350,
-      lineOaUrl: lineOaUrl
-    });
-  }, [slug, customerName, customerPhone, selectedService, selectedStaff, selectedDate, selectedTime]);
 
   const handleCopyPromptpay = () => {
     navigator.clipboard.writeText(promptpayNumber.replace(/-/g, ''));
@@ -177,8 +160,8 @@ export default function BookingPage() {
       {/* Main Content Area */}
       <main className="max-w-md mx-auto w-full px-4 py-6 flex-1">
         {bookingSuccess ? (
-          /* SUCCESS STATE WITH V3 LINE FLEX PREVIEW */
-          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 text-center shadow-xl shadow-emerald-950/40 animate-fade-in space-y-4">
+          /* SUCCESS STATE (CLEAN CUSTOMER CONFIRMATION) */
+          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 text-center shadow-xl shadow-emerald-950/40 animate-fade-in space-y-5">
             <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
               <CheckCircle2 className="w-10 h-10" />
             </div>
@@ -187,14 +170,14 @@ export default function BookingPage() {
               <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">#{bookingCode}</span></p>
             </div>
 
-            {/* V3 LINE Flex Card Preview Box */}
-            <div className="bg-slate-950 border border-[#06C755]/40 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
+            {/* Clean Receipt Card for Customer */}
+            <div className="bg-slate-950 border border-emerald-500/30 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                <span className="text-[11px] font-bold text-[#06C755] flex items-center gap-1">
-                  <MessageCircle className="w-3.5 h-3.5" /> LINE Flex Message Card (V3)
+                <span className="text-xs font-bold text-white flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> ใบนัดหมายจองคิวสำเร็จ
                 </span>
-                <span className="text-[10px] bg-[#06C755]/20 text-[#06C755] px-2 py-0.5 rounded font-mono">
-                  Ready to Dispatch
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold">
+                  อนุมัติแล้ว
                 </span>
               </div>
 
@@ -204,27 +187,21 @@ export default function BookingPage() {
                 <p>เวลานัด: <span className="font-semibold text-emerald-400">{selectedDate} @ {selectedTime} น.</span></p>
                 <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit}.00 (โอนแล้ว)</span></p>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowFlexModal(true)}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-[11px] text-slate-300 py-1.5 rounded-lg border border-slate-800 font-medium flex items-center justify-center gap-1 mt-2"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                ดูโครงสร้างการ์ด Flex Message (JSON Payload)
-              </button>
             </div>
 
-            {/* Direct Link to LINE Official Account */}
-            <a
-              href={lineOaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all"
-            >
-              <MessageCircle className="w-5 h-5" />
-              รับการแจ้งเตือนคิวผ่าน LINE OA ร้าน (@goodcutsbarber)
-            </a>
+            {/* Direct Button to Open LINE OA */}
+            <div className="space-y-2">
+              <a
+                href={lineOaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all"
+              >
+                <MessageCircle className="w-5 h-5" />
+                รับใบนัด & การแจ้งเตือนผ่าน LINE OA ร้าน (@goodcutsbarber)
+              </a>
+              <p className="text-[11px] text-slate-400">กดปุ่มเพื่อแอด LINE OA ร้านค้า และรับการแจ้งเตือนคิวนัดเข้าแชต LINE ทันที</p>
+            </div>
           </div>
         ) : (
           <div>
@@ -504,31 +481,6 @@ export default function BookingPage() {
           </div>
         )}
       </main>
-
-      {/* LINE FLEX JSON PAYLOAD MODAL */}
-      {showFlexModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-2xl animate-fade-in text-left">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold text-[#06C755] flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4" /> LINE Flex Message Card (JSON Payload)
-              </h3>
-              <button onClick={() => setShowFlexModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[10px] font-mono text-emerald-300 max-h-64 overflow-y-auto">
-              <pre>{JSON.stringify(flexCardData, null, 2)}</pre>
-            </div>
-
-            <button
-              onClick={() => setShowFlexModal(false)}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs"
-            >
-              ปิดหน้าต่าง
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-900 py-3 px-4 text-center text-[11px] text-slate-600">
