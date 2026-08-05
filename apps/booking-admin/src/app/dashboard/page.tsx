@@ -523,10 +523,9 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 2: SCHEDULES & SHOP HOLIDAYS (UPDATED WITH SIDE-BY-SIDE 2-COLUMN SHOP OPEN/CLOSE & DAYS OFF) */}
+        {/* TAB 2: SCHEDULES & SHOP HOLIDAYS */}
         {activeTab === 'schedules' && (
           <div className="space-y-6">
-            {/* MERGED CARD: SHOP OPEN/CLOSE HOURS & WEEKLY DAYS OFF (SIDE-BY-SIDE GRID) */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-4">
                 <div>
@@ -545,9 +544,7 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* 2-Column Side-by-Side Grid Layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
-                {/* Column 1: General Shop Business Hours */}
                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                   <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 border-b border-slate-800/80 pb-2">
                     <Clock className="w-4 h-4 text-emerald-400" /> เวลาเปิด - ปิดทำการทั่วไปของร้านค้า
@@ -576,7 +573,6 @@ export default function AdminDashboard() {
                   <p className="text-[10px] text-slate-500">สล็อตเวลารับจองคิวจะถูกจำกัดอยู่ในช่วงเวลานี้เสมอ</p>
                 </div>
 
-                {/* Column 2: Weekly Days Off */}
                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
                   <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5 border-b border-slate-800/80 pb-2">
                     <CalendarOff className="w-4 h-4 text-rose-400" /> วันหยุดประจำสัปดาห์ของร้านค้า (Shop-wide Off)
@@ -1137,7 +1133,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 6: OFFICIAL BILLING & SUBSCRIPTION */}
+        {/* TAB 6: OFFICIAL BILLING & SUBSCRIPTION (UPDATED WITH 5 / 5 / 10 STAFF QUOTAS) */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto">
             {/* Header Title */}
@@ -1186,7 +1182,7 @@ export default function AdminDashboard() {
                     <p className="font-bold text-slate-200">สิ่งที่ได้รับ:</p>
                     <ul className="space-y-2 text-[11px]">
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>50 คิว</strong></li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>3 คน</strong></li>
+                      <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>5 คน</strong></li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
@@ -1210,7 +1206,7 @@ export default function AdminDashboard() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-extrabold text-lg text-white">⚡ Basic Starter</h3>
-                      <p className="text-[11px] text-slate-400">สำหรับร้านขนาดเล็ก (1-3 คน)</p>
+                      <p className="text-[11px] text-slate-400">สำหรับร้านขนาดเล็ก (1-5 คน)</p>
                     </div>
                   </div>
 
@@ -1226,7 +1222,7 @@ export default function AdminDashboard() {
                     <p className="font-bold text-slate-200">สิ่งที่ได้รับ:</p>
                     <ul className="space-y-2 text-[11px]">
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>100 คิว/เดือน</strong></li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>3 คน</strong></li>
+                      <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>5 คน</strong></li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
@@ -1270,7 +1266,7 @@ export default function AdminDashboard() {
                     <p className="font-bold text-emerald-400">สิ่งที่ได้รับเพิ่มจัดเต็ม:</p>
                     <ul className="space-y-2 text-[11px]">
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>500 คิว/เดือน</strong></li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>10 คน</strong></li>
+                      <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>10 คน</strong></li>
                       <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนผ่าน LINE OA อัตโนมัติ</li>
                       <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตรวจสลิปอัตโนมัติ <strong>100 ครั้ง/เดือน</strong></li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ส่งข้อความแจ้งเตือนก่อนถึงวันนัด</li>
