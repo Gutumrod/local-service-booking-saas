@@ -141,6 +141,10 @@ export default function AdminDashboard() {
   const [shopProfileSaved, setShopProfileSaved] = useState(false);
   const [copiedLinkNotice, setCopiedLinkNotice] = useState(false);
 
+  // Shop Operating Hours State (General Opening / Closing Time)
+  const [shopOpenTime, setShopOpenTime] = useState('09:00');
+  const [shopCloseTime, setShopCloseTime] = useState('20:00');
+
   // Service Form State
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
   const [showServiceForm, setShowServiceForm] = useState(false);
@@ -519,47 +523,85 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 2: SCHEDULES & SHOP HOLIDAYS */}
+        {/* TAB 2: SCHEDULES & SHOP HOLIDAYS (UPDATED WITH SIDE-BY-SIDE 2-COLUMN SHOP OPEN/CLOSE & DAYS OFF) */}
         {activeTab === 'schedules' && (
           <div className="space-y-6">
+            {/* MERGED CARD: SHOP OPEN/CLOSE HOURS & WEEKLY DAYS OFF (SIDE-BY-SIDE GRID) */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-4">
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <CalendarOff className="w-5 h-5 text-amber-400" />
-                    ตั้งค่าวันหยุดประจำสัปดาห์ของร้านค้า (Shop-wide Days Off)
+                    <Clock className="w-5 h-5 text-emerald-400" />
+                    การตั้งค่าเวลาเปิด-ปิด & วันหยุดประจำสัปดาห์ของร้านค้า
                   </h2>
-                  <p className="text-xs text-slate-400">เลือกวันปิดทำการประจำสัปดาห์ของร้าน ระบบจะปิดรับจองในวันดังกล่าวทั้งหมด</p>
+                  <p className="text-xs text-slate-400">กำหนดกรอบเวลาเปิดทำการและวันปิดทำการประจำสัปดาห์ของร้านค้าเพื่อใช้คำนวณคิวจองอัตโนมัติ</p>
                 </div>
                 <button
                   onClick={triggerSaveNotice}
                   className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
                 >
                   <Save className="w-4 h-4" />
-                  {saveNotice ? 'บันทึกแล้ว!' : 'บันทึกการตั้งค่า'}
+                  {saveNotice ? 'บันทึกแล้ว!' : 'บันทึกการตั้งค่าร้านค้า'}
                 </button>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-xs font-semibold text-slate-300 block">เลือกวันปิดทำการประจำสัปดาห์ของร้าน:</label>
-                <div className="flex flex-wrap gap-2">
-                  {DAY_NAMES.map((dayName, idx) => {
-                    const isShopOff = shopWeeklyOffDays.includes(idx);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => toggleShopOffDay(idx)}
-                        className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                          isShopOff
-                            ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-bold'
-                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        {dayName} {isShopOff ? '(ร้านปิดทำการ)' : ''}
-                      </button>
-                    );
-                  })}
+              {/* 2-Column Side-by-Side Grid Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+                {/* Column 1: General Shop Business Hours */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 border-b border-slate-800/80 pb-2">
+                    <Clock className="w-4 h-4 text-emerald-400" /> เวลาเปิด - ปิดทำการทั่วไปของร้านค้า
+                  </span>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                    <div>
+                      <label className="text-[11px] text-slate-300 block mb-1 font-semibold">เวลาเปิดร้าน *</label>
+                      <input
+                        type="time"
+                        value={shopOpenTime}
+                        onChange={(e) => setShopOpenTime(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-300 block mb-1 font-semibold">เวลาปิดร้าน *</label>
+                      <input
+                        type="time"
+                        value={shopCloseTime}
+                        onChange={(e) => setShopCloseTime(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500">สล็อตเวลารับจองคิวจะถูกจำกัดอยู่ในช่วงเวลานี้เสมอ</p>
+                </div>
+
+                {/* Column 2: Weekly Days Off */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                  <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5 border-b border-slate-800/80 pb-2">
+                    <CalendarOff className="w-4 h-4 text-rose-400" /> วันหยุดประจำสัปดาห์ของร้านค้า (Shop-wide Off)
+                  </span>
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {DAY_NAMES.map((dayName, idx) => {
+                      const isShopOff = shopWeeklyOffDays.includes(idx);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => toggleShopOffDay(idx)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                            isShopOff
+                              ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-bold'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {dayName} {isShopOff ? '(ปิด)' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-slate-500">วันทำการที่ถูกเลือกปิด จะไม่เปิดให้ลูกค้าจองคิวในทุกกรณี</p>
                 </div>
               </div>
             </div>
@@ -761,7 +803,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 4: SHOP PROFILE & SERVICES MANAGER (WITH SHOP PHONE & READ-ONLY URL BAR) */}
+        {/* TAB 4: SHOP PROFILE & SERVICES MANAGER */}
         {activeTab === 'services' && (
           <div className="space-y-6">
             {/* SECTION 1: SHOP PROFILE EDITING */}
