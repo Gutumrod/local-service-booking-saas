@@ -1,5 +1,7 @@
 # 🚀 Local Service Booking & LINE Automation SaaS
 
+> **GitHub Repository:** [https://github.com/Gutumrod/local-service-booking-saas](https://github.com/Gutumrod/local-service-booking-saas)
+
 Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service Businesses (Barbershops, Salons, Clinics, Spas, Auto Detailing, etc.) built for solopreneur speed, high automation, and 100% self-service subscription model.
 
 ## 🌟 Key Features
@@ -19,6 +21,10 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 ## 🚀 Getting Started
 
 ```bash
+# Clone repository
+git clone https://github.com/Gutumrod/local-service-booking-saas.git
+cd local-service-booking-saas
+
 # Install dependencies
 npm install
 
