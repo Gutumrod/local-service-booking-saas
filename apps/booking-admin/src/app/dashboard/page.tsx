@@ -5,7 +5,8 @@ import {
   Calendar, Users, DollarSign, CheckCircle2, XCircle, Eye, Clock, 
   Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
   QrCode, UserPlus, FileText, ExternalLink, CalendarOff, Coffee, Save,
-  Filter, Copy, MessageCircle, Send, Check, AlertTriangle, Trash2, Edit3, Lock
+  Filter, Copy, MessageCircle, Send, Check, AlertTriangle, Trash2, Edit3, Lock,
+  Zap, HelpCircle, PackagePlus
 } from 'lucide-react';
 
 interface Booking {
@@ -109,6 +110,7 @@ const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังค�
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'bookings' | 'schedules' | 'services' | 'staff' | 'settings' | 'billing'>('bookings');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
   const [staffList, setStaffList] = useState<StaffMember[]>(INITIAL_STAFF);
   const [schedules, setSchedules] = useState<StaffSchedule[]>(INITIAL_SCHEDULES);
@@ -205,13 +207,13 @@ export default function AdminDashboard() {
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-amber-300 font-medium">
             <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>คุณกำลังใช้งาน **Free Trial 14 วัน** (เหลืออีก 12 วัน)</span>
+            <span>คุณกำลังใช้งาน **Free Trial 14 วัน** (โควตาจอง 12/50 คิว • ตรวจสลิปออโต้ 3/10 ครั้ง)</span>
           </div>
           <button 
             onClick={() => setActiveTab('billing')}
             className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition-all shadow-md"
           >
-            อัปเกรดเป็นแพ็กเกจเต็ม (490 บ./เดือน)
+            อัปเกรดเป็นแพ็กเกจเต็ม (เริ่มต้น 490 บ./เดือน)
           </button>
         </div>
       </div>
@@ -234,7 +236,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab('bookings')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'bookings' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
             >
-              รายการคิวทั้งหมด & ล่วงหน้า
+              รายการคิวทั้งหมด
             </button>
             <button
               onClick={() => setActiveTab('schedules')}
@@ -258,7 +260,13 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab('settings')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'settings' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
             >
-              ตั้งค่า PromptPay & LINE OA
+              ตั้งค่า PromptPay/LINE
+            </button>
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'billing' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-amber-400 hover:text-amber-300'}`}
+            >
+              แพ็กเกจชำระเงิน
             </button>
           </nav>
         </div>
@@ -689,7 +697,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 5: PROMPTPAY & SECURED LINE OA SETTINGS (EXPLICIT SECURITY ENHANCEMENT) */}
+        {/* TAB 5: PROMPTPAY & LINE OA SETTINGS */}
         {activeTab === 'settings' && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
             <div>
@@ -700,7 +708,6 @@ export default function AdminDashboard() {
               <p className="text-xs text-slate-400">กำหนดเลขบัญชี PromptPay รับเงินมัดจำของร้าน และเชื่อมต่อ LINE Official Account เพื่อส่งข้อความยืนยันคิวให้ลูกค้า</p>
             </div>
 
-            {/* Toggle Staff Selection Feature */}
             <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
               <div>
                 <p className="font-bold text-xs text-white">โหมดเปิด/ปิดระบบให้ลูกค้าเลือกระบุพนักงาน</p>
@@ -718,7 +725,6 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* PromptPay Settings */}
               <div className="bg-slate-950 border border-emerald-500/30 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
                   <QrCode className="w-5 h-5 text-emerald-400" />
@@ -744,13 +750,8 @@ export default function AdminDashboard() {
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-
-                <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-[11px] text-slate-400">
-                  💡 เลขนี้จะถูกนำไปสร้าง **PromptPay QR Code** อัตโนมัติในหน้าจองคิวของลูกค้า
-                </div>
               </div>
 
-              {/* SECURED LINE Official Account Settings (SECURITY FIX: NO RAW TOKEN EXPOSED) */}
               <div className="bg-slate-950 border border-[#06C755]/30 rounded-xl p-5 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
@@ -772,15 +773,11 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* SECURITY NOTICE BOX INSTEAD OF EXPOSING PLAIN-TEXT TOKENS ON CLIENT */}
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 text-xs text-slate-300 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-[11px]">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                     สถานะการเชื่อมต่อ: บัญชี LINE OA ทำงานปกติ (Protected)
                   </div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed">
-                    🔒 **ความปลอดภัยสูงสุด:** รหัสลับ `Channel Access Token` และ `Channel Secret` ถูกจัดเก็บอย่างปลอดภัยบน **Server Environment (.env.local / Supabase Secret Vault)** โดยตรง ไม่ถูกแสดงเป็นข้อความบนหน้าเว็บเบราว์เซอร์ เพื่อป้องกันการรั่วไหลหรือถูกโจรกรรมข้อมูล
-                  </p>
                 </div>
 
                 <button
@@ -796,58 +793,212 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={triggerSaveNotice}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-3 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-950/40"
-              >
-                <Save className="w-4 h-4" />
-                {saveNotice ? 'บันทึกการตั้งค่าเรียบร้อยแล้ว!' : 'บันทึกการตั้งค่าทั้งหมด'}
-              </button>
-            </div>
           </div>
         )}
 
-        {/* TAB 6: BILLING & SUBSCRIPTION */}
+        {/* TAB 6: OFFICIAL BILLING & SUBSCRIPTION (UPDATED EXACTLY TO KHUN FREE'S SPECIFICATION) */}
         {activeTab === 'billing' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-3xl mx-auto text-center space-y-6">
-            <div>
-              <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold">
-                Self-service Subscription Engine
+          <div className="space-y-8 max-w-5xl mx-auto">
+            {/* Header Title */}
+            <div className="text-center space-y-2">
+              <span className="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold">
+                Official Pricing & Subscription Model
               </span>
-              <h2 className="text-xl font-bold text-white mt-3">เลือกแพ็กเกจสมาชิกเพื่อใช้งานต่อเนื่อง</h2>
-              <p className="text-xs text-slate-400 mt-1">ปลดล็อกระบบมัดจำ QR และการแจ้งเตือน LINE OA แบบไม่จำกัด</p>
+              <h2 className="text-2xl font-extrabold text-white">แพ็กเกจระบบจองคิวบริการร้านค้า</h2>
+              <p className="text-xs text-slate-400 max-w-xl mx-auto">
+                เลือกแพ็กเกจที่เหมาะกับขนาดร้านค้าของคุณ เพื่อปลดล็อกระบบรับจองคิว PromptPay QR และการส่งแจ้งเตือน LINE OA
+              </p>
+
+              {/* Monthly / Yearly Toggle */}
+              <div className="flex items-center justify-center gap-3 pt-4">
+                <span className={`text-xs font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500'}`}>รายเดือน</span>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                  className="w-12 h-6 bg-slate-800 rounded-full p-1 border border-slate-700 transition-all relative"
+                >
+                  <div className={`w-4 h-4 bg-emerald-500 rounded-full transition-all ${billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+                <span className={`text-xs font-semibold flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'text-amber-400 font-bold' : 'text-slate-500'}`}>
+                  รายปี <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full border border-amber-500/30">ประหยัด 2 เดือน</span>
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-              <div className="bg-slate-950 border border-emerald-500/40 rounded-2xl p-6 space-y-4 relative">
-                <span className="absolute top-4 right-4 bg-emerald-500 text-slate-950 text-[10px] font-extrabold px-2.5 py-0.5 rounded">
-                  ยอดนิยม
-                </span>
-                <h3 className="font-bold text-base text-white">Basic Starter</h3>
-                <div className="text-2xl font-extrabold text-emerald-400 font-mono">฿490 <span className="text-xs font-normal text-slate-400">/เดือน</span></div>
-                <ul className="text-xs text-slate-300 space-y-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> รองรับจองคิวสูงสุด 200 คิว/เดือน</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> ระบบมัดจำ PromptPay QR</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> แจ้งเตือน LINE OA อัตโนมัติ</li>
-                </ul>
-                <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg">
-                  สมัครแพ็กเกจ Basic (฿490/เดือน)
-                </button>
+            {/* 3 Main Tiers Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              {/* FREE TRIAL TIER */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-extrabold text-lg text-white">🎁 Free Trial</h3>
+                      <p className="text-[11px] text-slate-400">ทดลองใช้ฟรี 14 วัน ก่อนตัดสินใจ</p>
+                    </div>
+                  </div>
+
+                  <div className="text-2xl font-extrabold text-emerald-400 font-mono">
+                    ฟรี 14 วัน
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
+                    <p className="font-bold text-slate-200">สิ่งที่ได้รับ:</p>
+                    <ul className="space-y-2 text-[11px]">
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>50 คิว</strong></li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>3 คน</strong></li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
+                      <li className="flex items-center gap-2 text-amber-300 font-semibold"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> แจ้งเตือน LINE OA (ทดลองใช้)</li>
+                      <li className="flex items-center gap-2 text-amber-300 font-semibold"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> ตรวจสลิปออโต้ (ทดลอง 10 ครั้ง)</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800/80">
+                  <span className="block text-center text-[10px] text-slate-500 mb-2">กำลังใช้งานแพ็กเกจนี้อยู่</span>
+                  <button disabled className="w-full bg-slate-800 text-slate-400 font-bold py-3 rounded-xl text-xs cursor-not-allowed">
+                    สถานะปัจจุบัน ( Trial 14 วัน )
+                  </button>
+                </div>
               </div>
 
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <h3 className="font-bold text-base text-white">Pro Unlimited</h3>
-                <div className="text-2xl font-extrabold text-white font-mono">฿990 <span className="text-xs font-normal text-slate-400">/เดือน</span></div>
-                <ul className="text-xs text-slate-300 space-y-2">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> ไม่จำกัดจำนวนคิวจอง</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> เพิ่มพนักงานได้ไม่จำกัด</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> ระบบรายงานยอดมัดจำ & CRM</li>
-                </ul>
-                <button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700">
-                  สมัครแพ็กเกจ Pro (฿990/เดือน)
-                </button>
+              {/* BASIC TIER */}
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative hover:border-slate-600 transition-all">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-extrabold text-lg text-white">⚡ Basic Starter</h3>
+                      <p className="text-[11px] text-slate-400">สำหรับร้านขนาดเล็ก (1-3 คน)</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-3xl font-extrabold text-white font-mono">
+                      {billingCycle === 'monthly' ? '฿490' : '฿4,900'} 
+                      <span className="text-xs font-normal text-slate-400">/{billingCycle === 'monthly' ? 'เดือน' : 'ปี'}</span>
+                    </div>
+                    {billingCycle === 'yearly' && <span className="text-[10px] text-amber-400 font-medium">เฉลี่ยเพียง ฿408 /เดือน</span>}
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
+                    <p className="font-bold text-slate-200">สิ่งที่ได้รับ:</p>
+                    <ul className="space-y-2 text-[11px]">
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>100 คิว/เดือน</strong></li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>3 คน</strong></li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตรวจสอบสลิปด้วยตนเองผ่าน Dashboard</li>
+                      <li className="flex items-center gap-2 text-rose-400 line-through opacity-70"><XCircle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" /> แจ้งเตือน LINE OA อัตโนมัติ</li>
+                      <li className="flex items-center gap-2 text-rose-400 line-through opacity-70"><XCircle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" /> ระบบตรวจสอบสลิปอัตโนมัติ</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800/80">
+                  <button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700 transition-all">
+                    เลือกแพ็กเกจ Basic ({billingCycle === 'monthly' ? '฿490/เดือน' : '฿4,900/ปี'})
+                  </button>
+                </div>
+              </div>
+
+              {/* PRO TIER */}
+              <div className="bg-slate-900 border-2 border-emerald-500 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative shadow-xl shadow-emerald-950/40">
+                <span className="absolute -top-3 right-6 bg-emerald-500 text-slate-950 text-[10px] font-extrabold px-3 py-0.5 rounded-full shadow-md">
+                  คุ้มค่าที่สุด (Recommended)
+                </span>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-extrabold text-lg text-white">🚀 Pro</h3>
+                      <p className="text-[11px] text-emerald-400 font-medium">สำหรับร้านหลายช่าง / ลดงานแอดมิน</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-3xl font-extrabold text-emerald-400 font-mono">
+                      {billingCycle === 'monthly' ? '฿990' : '฿9,900'} 
+                      <span className="text-xs font-normal text-slate-400">/{billingCycle === 'monthly' ? 'เดือน' : 'ปี'}</span>
+                    </div>
+                    {billingCycle === 'yearly' && <span className="text-[10px] text-amber-400 font-medium">เฉลี่ยเพียง ฿825 /เดือน</span>}
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
+                    <p className="font-bold text-emerald-400">สิ่งที่ได้รับเพิ่มจัดเต็ม:</p>
+                    <ul className="space-y-2 text-[11px]">
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>500 คิว/เดือน</strong></li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>10 คน</strong></li>
+                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนผ่าน LINE OA อัตโนมัติ</li>
+                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตรวจสลิปอัตโนมัติ <strong>100 ครั้ง/เดือน</strong></li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ส่งข้อความแจ้งเตือนก่อนถึงวันนัด</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รายงานสรุปคิว รายได้ & ประวัติลูกค้า</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800/80">
+                  <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-950/40 transition-all">
+                    เลือกแพ็กเกจ Pro ({billingCycle === 'monthly' ? '฿990/เดือน' : '฿9,900/ปี'})
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ADD-ONS SECTION */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl text-left space-y-4">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                <PackagePlus className="w-4 h-4 text-emerald-400" />
+                บริการเสริม (Add-ons) กรณีใช้งานเกินโควตา
+              </h3>
+              <p className="text-xs text-slate-400">ร้านสามารถซื้อเครดิตหรือโควตาเพิ่มได้โดยไม่ต้องเปลี่ยนแพ็กเกจหลักทันที:</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <p className="font-bold text-white">คิวจองเพิ่มเติม</p>
+                  <p className="text-[11px] text-slate-400">เพิ่มโควตารับคิวจองรายเดือน</p>
+                </div>
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <p className="font-bold text-white">เครดิตตรวจสลิปออโต้</p>
+                  <p className="text-[11px] text-slate-400">ซื้อเพิ่มเป็นแพ็กเกจครั้ง</p>
+                </div>
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <p className="font-bold text-white">จำนวนพนักงานเพิ่ม</p>
+                  <p className="text-[11px] text-slate-400">ขยายจำนวนช่างในร้าน</p>
+                </div>
+                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <p className="font-bold text-white">เซ็ตระบบ & นำเข้าข้อมูล</p>
+                  <p className="text-[11px] text-slate-400">บริการช่วยเซ็ตอัปครั้งแรก</p>
+                </div>
+              </div>
+            </div>
+
+            {/* SINGLE GATEWAY ARCHITECTURE NOTE (STRIPE SINGLE PROVIDER STANDARD) */}
+            <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 text-left space-y-3">
+              <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                สถาปัตยกรรมระบบชำระเงินค่าสมาชิก (Stripe Single Provider Standard)
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 pt-1">
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <p className="font-bold text-white flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-emerald-400" /> PromptPay QR (ไม่ผูกบัตร)
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    ร้านสแกนจ่ายชำระรายรอบบิลจากหน้า Dashboard เหมาะสำหรับร้านที่ไม่ต้องการผูกบัตรเครดิต
+                  </p>
+                </div>
+
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+                  <p className="font-bold text-white flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-emerald-400" /> Stripe Billing & Customer Portal
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    ใช้ **Stripe ตัวเดียวครอบคลุม** (Checkout / Billing / Portal / Webhooks) ตัดเงินอัตโนมัติ ไม่ต้องทำระบบรับเงินสองเจ้า ป้องกันปัญหาสนาม Webhook รวน
+                  </p>
+                </div>
               </div>
             </div>
           </div>
