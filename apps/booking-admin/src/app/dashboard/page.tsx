@@ -6,7 +6,7 @@ import {
   Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
   QrCode, UserPlus, FileText, ExternalLink, CalendarOff, Coffee, Save,
   Filter, Copy, MessageCircle, Send, Check, AlertTriangle, Trash2, Edit3, Lock,
-  Zap, HelpCircle, PackagePlus, Scissors, Store, Globe
+  Zap, HelpCircle, PackagePlus, Scissors, Store, Globe, Phone
 } from 'lucide-react';
 
 interface Booking {
@@ -136,8 +136,10 @@ export default function AdminDashboard() {
   // Shop Profile State
   const [shopName, setShopName] = useState('Good Cuts Barber');
   const [shopSlogan, setShopSlogan] = useState('ร้านตัดผมชายพรีเมียม & สปาหนังศีรษะ');
+  const [shopPhone, setShopPhone] = useState('081-234-5678');
   const [shopSlug, setShopSlug] = useState('good-cuts-barber');
   const [shopProfileSaved, setShopProfileSaved] = useState(false);
+  const [copiedLinkNotice, setCopiedLinkNotice] = useState(false);
 
   // Service Form State
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
@@ -204,6 +206,13 @@ export default function AdminDashboard() {
     e.preventDefault();
     setShopProfileSaved(true);
     setTimeout(() => setShopProfileSaved(false), 2000);
+  };
+
+  const handleCopyShopLink = () => {
+    const fullUrl = `http://localhost:3000/book/${shopSlug}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedLinkNotice(true);
+    setTimeout(() => setCopiedLinkNotice(false), 2000);
   };
 
   const handleAddStaff = (e: React.FormEvent) => {
@@ -317,7 +326,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="font-bold text-base text-white">{shopName} Dashboard</h1>
-              <p className="text-[11px] text-slate-400">{shopSlogan}</p>
+              <p className="text-[11px] text-slate-400">{shopSlogan} • โทร: {shopPhone}</p>
             </div>
           </div>
 
@@ -752,7 +761,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 4: SHOP PROFILE & SERVICES MANAGER (MERGED AS REQUESTED BY KHUN FREE) */}
+        {/* TAB 4: SHOP PROFILE & SERVICES MANAGER (WITH SHOP PHONE & READ-ONLY URL BAR) */}
         {activeTab === 'services' && (
           <div className="space-y-6">
             {/* SECTION 1: SHOP PROFILE EDITING */}
@@ -763,7 +772,7 @@ export default function AdminDashboard() {
                     <Store className="w-5 h-5 text-emerald-400" />
                     จัดการข้อมูลอัตลักษณ์ร้านค้า (Shop Profile Settings)
                   </h2>
-                  <p className="text-xs text-slate-400">แก้ไขชื่อร้าน สโลแกน และ URL สำหรับนำไปแสดงในหน้าจองของลูกค้าและใบนัดหมาย LINE Flex Card</p>
+                  <p className="text-xs text-slate-400">แก้ไขชื่อร้าน สโลแกน และเบอร์โทรสายตรงสำหรับนำไปแสดงในหน้าจองของลูกค้าและใบนัดหมาย LINE Flex Card</p>
                 </div>
                 <button
                   onClick={handleSaveShopProfile}
@@ -798,19 +807,37 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">URL ลิงก์ร้านค้า (Slug) *</label>
+                  <label className="text-slate-300 block mb-1 font-semibold text-emerald-400">เบอร์โทรสายตรงร้านค้า (Shop Phone) *</label>
                   <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold">
-                    <Globe className="w-3.5 h-3.5 text-slate-500 mr-1.5 flex-shrink-0" />
-                    <span className="text-slate-500 text-[11px]">/book/</span>
+                    <Phone className="w-3.5 h-3.5 text-emerald-400 mr-1.5 flex-shrink-0" />
                     <input
                       required
-                      type="text"
-                      value={shopSlug}
-                      onChange={(e) => setShopSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                      type="tel"
+                      value={shopPhone}
+                      onChange={(e) => setShopPhone(e.target.value)}
                       className="w-full bg-transparent border-none text-emerald-400 font-mono font-bold focus:outline-none ml-0.5"
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* READ-ONLY SHOP URL LINK BAR WITH COPY BUTTON */}
+              <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <span className="text-slate-400">ลิงก์หน้าจองออนไลน์ของร้านค้า (Read-only):</span>
+                  <span className="font-mono text-emerald-400 font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                    http://localhost:3000/book/{shopSlug}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyShopLink}
+                  className="bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold px-3 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center gap-1.5 shadow-sm"
+                >
+                  {copiedLinkNotice ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedLinkNotice ? 'คัดลอกลิงก์แล้ว!' : 'คัดลอกลิงก์ร้านค้า'}
+                </button>
               </div>
             </div>
 

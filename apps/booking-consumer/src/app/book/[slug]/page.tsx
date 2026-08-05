@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { 
   Calendar, Clock, User, CheckCircle2, QrCode, Upload, ShieldCheck, 
   ChevronRight, Sparkles, MessageCircle, AlertTriangle, Coffee, CalendarOff,
-  Copy, Download, Check, ShieldAlert, Send
+  Copy, Download, Check, ShieldAlert, Send, PhoneCall, Phone
 } from 'lucide-react';
 import { createCustomerBookingFlex } from '../../../lib/line-flex';
 
@@ -72,6 +72,7 @@ export default function BookingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
 
+  const shopPhone = '081-234-5678';
   const promptpayNumber = '081-234-5678';
   const lineOaUrl = 'https://line.me/R/ti/p/@goodcutsbarber';
   const bookingCode = 'BK-1042';
@@ -139,7 +140,7 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Top Header Bar */}
+      {/* Top Header Bar with Clickable Shop Phone */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 px-4 py-3">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -151,16 +152,22 @@ export default function BookingPage() {
               <p className="text-[10px] text-emerald-400 font-medium">ระบบจองคิวออนไลน์ • ชำระมัดจำปลอดภัย</p>
             </div>
           </div>
-          <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">
-            ขั้นตอน {step}/3
-          </span>
+
+          <a
+            href={`tel:${shopPhone.replace(/-/g, '')}`}
+            className="text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 font-semibold px-2.5 py-1 rounded-full border border-slate-700 flex items-center gap-1 transition-all"
+            title="โทรสอบถามร้านค้า"
+          >
+            <PhoneCall className="w-3 h-3" />
+            <span className="hidden sm:inline">โทร: </span>{shopPhone}
+          </a>
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="max-w-md mx-auto w-full px-4 py-6 flex-1">
         {bookingSuccess ? (
-          /* SUCCESS STATE (CLEAN CUSTOMER CONFIRMATION) */
+          /* SUCCESS STATE WITH SHOP PHONE CONTACT */
           <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 text-center shadow-xl shadow-emerald-950/40 animate-fade-in space-y-5">
             <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
               <CheckCircle2 className="w-10 h-10" />
@@ -170,7 +177,7 @@ export default function BookingPage() {
               <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">#{bookingCode}</span></p>
             </div>
 
-            {/* Clean Receipt Card for Customer */}
+            {/* Clean Receipt Card for Customer with Shop Phone */}
             <div className="bg-slate-950 border border-emerald-500/30 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-white flex items-center gap-1">
@@ -186,10 +193,11 @@ export default function BookingPage() {
                 <p>พนักงาน: <span className="font-semibold text-white">{selectedStaff?.nickname}</span></p>
                 <p>เวลานัด: <span className="font-semibold text-emerald-400">{selectedDate} @ {selectedTime} น.</span></p>
                 <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit}.00 (โอนแล้ว)</span></p>
+                <p className="text-slate-400 pt-1">เบอร์สายตรงร้านค้า: <a href={`tel:${shopPhone.replace(/-/g, '')}`} className="font-mono font-bold text-amber-400 hover:underline">{shopPhone}</a></p>
               </div>
             </div>
 
-            {/* Direct Button to Open LINE OA */}
+            {/* Action Buttons */}
             <div className="space-y-2">
               <a
                 href={lineOaUrl}
@@ -200,7 +208,14 @@ export default function BookingPage() {
                 <MessageCircle className="w-5 h-5" />
                 รับใบนัด & การแจ้งเตือนผ่าน LINE OA ร้าน (@goodcutsbarber)
               </a>
-              <p className="text-[11px] text-slate-400">กดปุ่มเพื่อแอด LINE OA ร้านค้า และรับการแจ้งเตือนคิวนัดเข้าแชต LINE ทันที</p>
+
+              <a
+                href={`tel:${shopPhone.replace(/-/g, '')}`}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all"
+              >
+                <Phone className="w-4 h-4 text-emerald-400" />
+                โทรสอบถามทางร้านกรณีฉุกเฉิน ({shopPhone})
+              </a>
             </div>
           </div>
         ) : (

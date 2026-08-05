@@ -1,6 +1,7 @@
 export interface BookingFlexPayload {
   bookingId: string;
   shopName: string;
+  shopPhone: string;
   customerName: string;
   phone: string;
   serviceName: string;
@@ -25,7 +26,7 @@ export function createCustomerBookingFlex(data: BookingFlexPayload) {
         contents: [
           { type: "text", text: "ใบนัดหมายจองคิวบริการ", weight: "bold", color: "#06C755", size: "sm" },
           { type: "text", text: data.shopName, weight: "bold", size: "xl", color: "#FFFFFF", margin: "xs" },
-          { type: "text", text: `รหัสการจอง: #${data.bookingId}`, size: "xs", color: "#38BDF8", margin: "xs" }
+          { type: "text", text: `รหัสการจอง: #${data.bookingId} • โทรสอบถาม: ${data.shopPhone}`, size: "xs", color: "#38BDF8", margin: "xs" }
         ],
         backgroundColor: "#0F172A",
         paddingAll: "20px"
@@ -81,9 +82,17 @@ export function createCustomerBookingFlex(data: BookingFlexPayload) {
         contents: [
           {
             type: "button",
+            action: { type: "uri", label: `📞 โทรตรงหาทางร้าน (${data.shopPhone})`, uri: `tel:${data.shopPhone.replace(/-/g, '')}` },
+            style: "secondary",
+            color: "#334155",
+            margin: "xs"
+          },
+          {
+            type: "button",
             action: { type: "uri", label: "รับการแจ้งเตือนผ่าน LINE OA", uri: data.lineOaUrl },
             style: "primary",
-            color: "#06C755"
+            color: "#06C755",
+            margin: "sm"
           }
         ],
         backgroundColor: "#0F172A",
