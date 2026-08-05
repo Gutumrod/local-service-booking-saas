@@ -1,32 +1,28 @@
-# 🗺️ ROADMAP & CHECKPOINTS (V2 ➔ V4)
-## "Local Service Booking & LINE Automation SaaS"
+# 🗺️ MASTER ROADMAP: Local Service Booking & LINE Automation SaaS
 
-> **อนุมัติโดย:** คุณฟรี (CEO)  
-> **วันที่มีผล:** 2026-08-05
+> **สถานะโครงการ:** Checkpoint V3 Completed (2026-08-05)  
+> **GitHub Repository:** [https://github.com/Gutumrod/local-service-booking-saas](https://github.com/Gutumrod/local-service-booking-saas)
 
 ---
 
-## 📌 สรุปแผนการพัฒนาและเช็คพอยต์ (Master Roadmap)
+## 📌 สรุปความคืบหน้าระดับมิลสโตน (Milestone Status)
 
-| Checkpoint | ฟีเจอร์หลัก (Core Deliverables) | สถานะ |
+| Checkpoint | ฟีเจอร์หลัก (Key Features) | สถานะ (Status) |
 | :--- | :--- | :--- |
-| **V1 (Completed)** | Monorepo Setup, Supabase Schema Initial, 3-Step Customer Booking, Store Dashboard & 14-Day Free Trial Banner | 🟢 Completed |
-| **V2 (Current Target)** | **ระบบตารางช่าง & วันหยุดร้านแบบจัดเต็ม:** เวลาทำงาน, เวลาพักเที่ยง, วันหยุดประจำสัปดาห์, วันหยุดพิเศษรายวัน + Slot Calculator Engine | 🟡 In Progress |
-| **V3** | **ระบบแจ้งเตือน LINE OA & Flex Message:** การ์ดใบจองคิวสวยงามส่งเข้า LINE ลูกค้า + การ์ดเตือนคิวใหม่ให้ร้าน + แจ้งเตือนล่วงหน้า 1 ชั่วโมง | ⚪ Pending |
-| **V4** | **ระบบตรวจสลิปมัดจำอัตโนมัติ 100%:** ต่อ Slip Verification API อนุมัติคิวทันทีโดยไม่ต้องกดมือ + Auto Subscription Billing | ⚪ Pending |
+| **V1: Monorepo & Initial UI** | Setup Monorepo, Supabase Schema V1, 3-Step Booking UI, Dashboard ตรวจสลิปมัดจำ, Free Trial 14 วัน | ✅ **Completed** |
+| **V2: Staff Schedule & Holidays** | ตารางช่าง, เวลาพักเที่ยง (12:00-13:00), วันหยุดประจำสัปดาห์ร้าน, วันหยุดพิเศษ, Dynamic Slot Engine, Security Hotfix | ✅ **Completed** |
+| **V3: LINE OA Flex Cards** | LINE Flex Message Receipt Cards, Store Owner Instant Alert, `/api/line/webhook` Handler, LINE Notification Logs DB | ✅ **Completed** |
+| **V4: Auto Slip & Subscription** | 100% Automated Slip Verification API (EasySlip/SlipOK), Stripe Billing Subscription integration | ⏳ **Next Target** |
 
 ---
 
-## 🛠️ รายละเอียดสเปก Checkpoint V2 (Staff Schedule & Slot Blocking)
+## 🎯 รายละเอียด V3 & V4
 
-### 1. Store Owner Dashboard (หน้าตั้งค่าหลังบ้าน)
-- **Staff Shift & Working Hours:** กำหนดเวลาเริ่ม-เลิกงานของช่างแต่ละคน (เช่น 10:00 - 19:00 น.)
-- **Break Time Management:** กำหนดเวลาพักเที่ยง/พักระหว่างวัน (เช่น 12:00 - 13:00 น.) ระบบจะซ่อนคิวช่วงเวลานั้นอัตโนมัติ
-- **Weekly Days Off:** เลือกวันหยุดประจำสัปดาห์ของช่าง (เช่น หยุดทุกวันจันทร์)
-- **Special Holiday Dates:** กำหนดวันหยุดพิเศษรายวัน (เช่น หยุดวันแม่ 12 ส.ค.)
+### ✅ Checkpoint V3 (Completed): LINE OA & Flex Message Notifications
+- **LINE Flex Message Generator:** สร้างการ์ด Flex Message ใบนัดหมายดีไซน์สวยงามส่งเข้า LINE ลูกค้าและเจ้าของร้าน
+- **Webhook Endpoint:** Next.js Route Handler `/api/line/webhook` พร้อมระบบตรวจสอบ `x-line-signature`
+- **LINE Notification Logs:** ตารางฐานข้อมูลบันทึกประวัติการส่งข้อความเตือนล่วงหน้า 1 ชั่วโมง และ 24 ชั่วโมง
 
-### 2. Customer Booking Engine (คำนวณคิวฝั่งลูกค้า)
-- คำนวณรอบเวลาว่าง (Available Time Slots) อัตโนมัติ โดยตัด:
-  - รอบเวลาที่คิวเต็มแล้ว
-  - รอบเวลาตรงกับช่วงพักเที่ยงของช่าง
-  - รอบเวลาที่ตรงกับวันหยุดประจำสัปดาห์หรือวันหยุดพิเศษ
+### ⏳ Checkpoint V4 (Next Target): Auto Slip Verification & Self-service Subscription
+- **100% Automated Slip Verification:** สแกน QR บนสลิปมัดจำ ตรวจเช็กเลขอ้างอิงและยอดโอนผ่าน API เพื่ออนุมัติคิวอัตโนมัติ
+- **Stripe Billing Integration:** ระบบสมัครและตัดเงินค่าสมาชิกรายเดือน (Basic 490 บ. / Pro 990 บ.) อัตโนมัติผ่าน Stripe Customer Portal

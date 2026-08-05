@@ -5,8 +5,9 @@ import { useParams } from 'next/navigation';
 import { 
   Calendar, Clock, User, CheckCircle2, QrCode, Upload, ShieldCheck, 
   ChevronRight, Sparkles, MessageCircle, AlertTriangle, Coffee, CalendarOff,
-  Copy, Download, Check, ShieldAlert
+  Copy, Download, Check, ShieldAlert, Send
 } from 'lucide-react';
+import { createCustomerBookingFlex } from '../../../lib/line-flex';
 
 interface Service {
   id: string;
@@ -44,10 +45,9 @@ const SPECIAL_HOLIDAYS = [
   { date: '2026-08-12', reason: 'วันแม่แห่งชาติ (ร้านปิดทำการประจำปี)' }
 ];
 
-// Slots with booked status simulation to prevent double booking
 const SLOT_STATUS_MAP: Record<string, boolean> = {
-  '10:30': true, // Booked
-  '14:30': true  // Booked
+  '10:30': true,
+  '14:30': true
 };
 
 const ALL_TIME_SLOTS = ['09:30', '10:30', '11:30', '12:30', '13:30', '14:30', '15:30', '16:30', '17:30', '18:30'];
@@ -71,9 +71,27 @@ export default function BookingPage() {
   const [savedQrNotice, setSavedQrNotice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [showFlexModal, setShowFlexModal] = useState(false);
 
   const promptpayNumber = '081-234-5678';
   const lineOaUrl = 'https://line.me/R/ti/p/@goodcutsbarber';
+  const bookingCode = 'BK-1042';
+
+  const flexCardData = useMemo(() => {
+    return createCustomerBookingFlex({
+      bookingId: bookingCode,
+      shopName: slug.replace(/-/g, ' ').toUpperCase(),
+      customerName: customerName || 'คุณสมชาย ใจดี',
+      phone: customerPhone || '081-234-5678',
+      serviceName: selectedService?.name || 'ตัดผมชายพรีเมียม',
+      staffName: selectedStaff?.nickname || 'ช่างเอก',
+      date: selectedDate,
+      time: selectedTime,
+      depositAmount: selectedService?.deposit || 100,
+      totalPrice: selectedService?.price || 350,
+      lineOaUrl: lineOaUrl
+    });
+  }, [slug, customerName, customerPhone, selectedService, selectedStaff, selectedDate, selectedTime]);
 
   const handleCopyPromptpay = () => {
     navigator.clipboard.writeText(promptpayNumber.replace(/-/g, ''));
@@ -159,31 +177,42 @@ export default function BookingPage() {
       {/* Main Content Area */}
       <main className="max-w-md mx-auto w-full px-4 py-6 flex-1">
         {bookingSuccess ? (
-          /* SUCCESS STATE */
-          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 text-center shadow-xl shadow-emerald-950/40 animate-fade-in">
-            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+          /* SUCCESS STATE WITH V3 LINE FLEX PREVIEW */
+          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 text-center shadow-xl shadow-emerald-950/40 animate-fade-in space-y-4">
+            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-1">ส่งสลิป & ยืนยันการจองเรียบร้อย!</h2>
-            <p className="text-xs text-slate-400 mb-6">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">#BK-{Math.floor(1000 + Math.random() * 9000)}</span></p>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">ส่งสลิป & ยืนยันการจองเรียบร้อย!</h2>
+              <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">#{bookingCode}</span></p>
+            </div>
 
-            <div className="bg-slate-950/80 rounded-xl p-4 text-left border border-slate-800 space-y-2 mb-6 text-xs text-slate-300">
-              <div className="flex justify-between">
-                <span className="text-slate-400">บริการ:</span>
-                <span className="font-medium text-white">{selectedService?.name}</span>
+            {/* V3 LINE Flex Card Preview Box */}
+            <div className="bg-slate-950 border border-[#06C755]/40 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span className="text-[11px] font-bold text-[#06C755] flex items-center gap-1">
+                  <MessageCircle className="w-3.5 h-3.5" /> LINE Flex Message Card (V3)
+                </span>
+                <span className="text-[10px] bg-[#06C755]/20 text-[#06C755] px-2 py-0.5 rounded font-mono">
+                  Ready to Dispatch
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">พนักงานให้บริการ:</span>
-                <span className="font-medium text-white">{selectedStaff?.nickname}</span>
+
+              <div className="text-xs space-y-1.5 pt-1 text-slate-300">
+                <p>บริการ: <span className="font-semibold text-white">{selectedService?.name}</span></p>
+                <p>พนักงาน: <span className="font-semibold text-white">{selectedStaff?.nickname}</span></p>
+                <p>เวลานัด: <span className="font-semibold text-emerald-400">{selectedDate} @ {selectedTime} น.</span></p>
+                <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit}.00 (โอนแล้ว)</span></p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">วัน-เวลา:</span>
-                <span className="font-medium text-emerald-400">{selectedDate} เวลา {selectedTime} น.</span>
-              </div>
-              <div className="flex justify-between border-t border-slate-800 pt-2">
-                <span className="text-slate-400">มัดจำที่โอนแล้ว:</span>
-                <span className="font-semibold text-emerald-400">฿{selectedService?.deposit} (รอร้านค้าอนุมัติ)</span>
-              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowFlexModal(true)}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-[11px] text-slate-300 py-1.5 rounded-lg border border-slate-800 font-medium flex items-center justify-center gap-1 mt-2"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                ดูโครงสร้างการ์ด Flex Message (JSON Payload)
+              </button>
             </div>
 
             {/* Direct Link to LINE Official Account */}
@@ -244,7 +273,7 @@ export default function BookingPage() {
               </div>
             )}
 
-            {/* STEP 2: SELECT STAFF & TIME (UPDATED WITH NO-STAFF MODE & PREVENT DOUBLE BOOKING) */}
+            {/* STEP 2: SELECT STAFF & TIME */}
             {step === 2 && (
               <div className="space-y-5">
                 <div>
@@ -284,7 +313,7 @@ export default function BookingPage() {
                   />
                 </div>
 
-                {/* Time Slot Display with Prevent Double-Booking */}
+                {/* Time Slot Display */}
                 <div>
                   <label className="text-xs font-semibold text-slate-300 mb-2 block">เลือกรอบเวลาที่ว่าง (ป้องกันการจองซ้ำซ้อน)</label>
 
@@ -345,7 +374,7 @@ export default function BookingPage() {
               </div>
             )}
 
-            {/* STEP 3: PROMPTPAY DEPOSIT & SLIP UPLOAD (WITH COPY & DOWNLOAD BUTTONS + ANTI-FAKE SLIP BADGE) */}
+            {/* STEP 3: PROMPTPAY DEPOSIT & SLIP UPLOAD */}
             {step === 3 && (
               <form onSubmit={handleCompleteBooking} className="space-y-4">
                 <div>
@@ -359,7 +388,6 @@ export default function BookingPage() {
                     PromptPay QR
                   </div>
                   
-                  {/* PromptPay QR Image & Download Button */}
                   <div className="pt-2">
                     <div className="w-36 h-36 bg-white rounded-xl p-2 mx-auto mb-2 flex items-center justify-center border border-slate-300 shadow-md">
                       <QrCode className="w-32 h-32 text-slate-900" />
@@ -379,7 +407,6 @@ export default function BookingPage() {
                     <p className="text-2xl font-extrabold text-emerald-400 font-mono my-0.5">฿{selectedService?.deposit}.00</p>
                     <p className="text-[11px] text-slate-400">ชื่อบัญชี: <span className="text-white font-medium">บจก. กู้ด คัทส์ (Good Cuts Co., Ltd.)</span></p>
                     
-                    {/* PromptPay Number with Copy Button */}
                     <div className="flex items-center justify-center gap-2 mt-1">
                       <span className="text-xs text-slate-400">เลขพร้อมเพย์: <span className="font-mono text-white font-bold">{promptpayNumber}</span></span>
                       <button
@@ -393,7 +420,6 @@ export default function BookingPage() {
                     </div>
                   </div>
 
-                  {/* Anti-Fake Slip Protection Badge */}
                   <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 flex items-center gap-2 text-left">
                     <ShieldAlert className="w-5 h-5 text-amber-400 flex-shrink-0" />
                     <span>ระบบมีระบบสแกน QR บนสลิปและตรวจสอบสลิปปลอมอัตโนมัติ ป้องกันสลิปซ้ำซ้อน 100%</span>
@@ -478,6 +504,31 @@ export default function BookingPage() {
           </div>
         )}
       </main>
+
+      {/* LINE FLEX JSON PAYLOAD MODAL */}
+      {showFlexModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-2xl animate-fade-in text-left">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <h3 className="text-xs font-bold text-[#06C755] flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4" /> LINE Flex Message Card (JSON Payload)
+              </h3>
+              <button onClick={() => setShowFlexModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[10px] font-mono text-emerald-300 max-h-64 overflow-y-auto">
+              <pre>{JSON.stringify(flexCardData, null, 2)}</pre>
+            </div>
+
+            <button
+              onClick={() => setShowFlexModal(false)}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs"
+            >
+              ปิดหน้าต่าง
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-900 py-3 px-4 text-center text-[11px] text-slate-600">
