@@ -373,34 +373,36 @@ export default function PlatformSuperAdminPage() {
                       </td>
 
                       {/* Manual Actions */}
-                      <td className="py-3.5 px-4 text-right space-x-1">
-                        <button
-                          onClick={() => handleAddTopupBookings(shop.id, 100)}
-                          className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded text-[10px] font-bold"
-                          title="เติมโควตาเสริม +100 คิว (199 บาท)"
-                        >
-                          +100 คิว Topup
-                        </button>
-                        <select
-                          value={shop.plan}
-                          onChange={(e) => handleUpdatePlan(shop.id, e.target.value as any)}
-                          className="bg-slate-950 border border-purple-500/40 text-purple-300 px-2 py-1 rounded text-[10px] font-bold focus:outline-none"
-                        >
-                          <option value="free_trial">Trial</option>
-                          <option value="basic_490">Basic 490</option>
-                          <option value="pro_990">Pro 990</option>
-                        </select>
-                        <button
-                          onClick={() => handleToggleShopStatus(shop.id)}
-                          className={`px-2 py-1 rounded text-[10px] font-bold border transition-all ${
-                            shop.status === 'active'
-                              ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
-                              : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
-                          }`}
-                          title={shop.status === 'active' ? 'ยกเลิก/ระงับบริการร้านค้า' : 'เปิดคืนบริการร้านค้า'}
-                        >
-                          {shop.status === 'active' ? 'ยกเลิกบริการ' : 'เปิดคืนบริการ'}
-                        </button>
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                          <button
+                            onClick={() => handleAddTopupBookings(shop.id, 100)}
+                            className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm"
+                            title="เติมโควตาเสริม +100 คิว (199 บาท)"
+                          >
+                            +100 คิว Topup
+                          </button>
+                          <select
+                            value={shop.plan}
+                            onChange={(e) => handleUpdatePlan(shop.id, e.target.value as any)}
+                            className="bg-slate-950 border border-purple-500/40 text-purple-300 px-2.5 py-1 rounded-lg text-[10px] font-bold focus:outline-none cursor-pointer"
+                          >
+                            <option value="free_trial">Trial</option>
+                            <option value="basic_490">Basic 490</option>
+                            <option value="pro_990">Pro 990</option>
+                          </select>
+                          <button
+                            onClick={() => handleToggleShopStatus(shop.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all shadow-sm ${
+                              shop.status === 'active'
+                                ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
+                                : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                            }`}
+                            title={shop.status === 'active' ? 'ยกเลิก/ระงับบริการร้านค้า' : 'เปิดคืนบริการร้านค้า'}
+                          >
+                            {shop.status === 'active' ? 'ยกเลิกบริการ' : 'เปิดคืนบริการ'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
