@@ -34,13 +34,23 @@ export default function Home() {
           </div>
         </div>
 
-        <Link
-          href="/dashboard"
-          className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all"
-        >
-          เข้าสู่ระบบหลังบ้านร้านค้า (Dashboard Demo)
-          <ChevronRight className="w-4 h-4" />
-        </Link>
+        <div className="space-y-3 pt-2">
+          <Link
+            href="/register"
+            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            สมัครสมาชิกร้านค้าใหม่ (ทดลองใช้ฟรี 14 วัน)
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+
+          <Link
+            href="/dashboard"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 py-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+          >
+            เข้าสู่ระบบหลังบ้านร้านค้าเดโม (Dashboard Demo)
+          </Link>
+        </div>
       </div>
     </div>
   );
