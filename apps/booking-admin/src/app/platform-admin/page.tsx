@@ -355,19 +355,19 @@ export default function PlatformSuperAdminPage() {
                       </td>
 
                       {/* Quota Usage */}
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="space-y-1 w-24">
+                          <div className="flex justify-between text-[11px] items-center gap-1">
                             <span className={`font-mono font-bold ${isNearLimit ? 'text-rose-400' : 'text-slate-200'}`}>
-                              {shop.bookingsThisMonth} / {shop.maxBookingsQuota + shop.topupBookings} คิว
+                              {shop.bookingsThisMonth} / {shop.maxBookingsQuota + shop.topupBookings}
                             </span>
                             {shop.topupBookings > 0 && (
                               <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-1 rounded font-mono">
-                                Topup +{shop.topupBookings}
+                                +{shop.topupBookings}
                               </span>
                             )}
                           </div>
-                          <div className="w-36 bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                          <div className="w-24 bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
                             <div 
                               className={`h-full transition-all ${isNearLimit ? 'bg-rose-500' : 'bg-emerald-500'}`}
                               style={{ width: `${usagePercent}%` }}
