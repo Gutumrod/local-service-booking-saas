@@ -6,7 +6,7 @@ import {
   Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
   QrCode, UserPlus, FileText, ExternalLink, CalendarOff, Coffee, Save,
   Filter, Copy, MessageCircle, Send, Check, AlertTriangle, Trash2, Edit3, Lock,
-  Zap, HelpCircle, PackagePlus, Scissors, Store, Globe, Phone
+  Zap, HelpCircle, PackagePlus, Scissors, Store, Globe, Phone, X
 } from 'lucide-react';
 
 interface Booking {
@@ -204,6 +204,10 @@ export default function AdminDashboard() {
   const handleRejectSlip = (bookingId: string) => {
     setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
     setSelectedSlipBooking(null);
+  };
+
+  const handleCancelBooking = (bookingId: string) => {
+    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
   };
 
   const toggleShopOffDay = (dayIdx: number) => {
@@ -462,84 +466,96 @@ export default function AdminDashboard() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full text-left text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
-                    <th className="py-3 px-4">รหัสคิว / ลูกค้า</th>
-                    <th className="py-3 px-4">บริการที่เลือก</th>
-                    <th className="py-3 px-4">พนักงานให้บริการ</th>
-                    <th className="py-3 px-4">วันที่นัดหมาย</th>
-                    <th className="py-3 px-4">เวลานัด</th>
-                    <th className="py-3 px-4">ยอดมัดจำ</th>
-                    <th className="py-3 px-4">สถานะ</th>
-                    <th className="py-3 px-4 text-right">การจัดการ</th>
+                  <tr className="border-b border-slate-800 text-slate-300 uppercase text-xs tracking-wider font-bold">
+                    <th className="py-3.5 px-4">รหัสคิว / ลูกค้า</th>
+                    <th className="py-3.5 px-4">บริการที่เลือก</th>
+                    <th className="py-3.5 px-4">พนักงานให้บริการ</th>
+                    <th className="py-3.5 px-4">วันที่นัดหมาย</th>
+                    <th className="py-3.5 px-4">เวลานัด</th>
+                    <th className="py-3.5 px-4">ยอดมัดจำ</th>
+                    <th className="py-3.5 px-4">สถานะ</th>
+                    <th className="py-3.5 px-4 text-right">การจัดการ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-800/60 text-sm">
                   {filteredBookings.map((b) => (
                     <tr key={b.id} className="hover:bg-slate-800/40 transition-all">
-                      <td className="py-3.5 px-4">
-                        <p className="font-mono font-bold text-emerald-400">{b.id}</p>
-                        <p className="font-semibold text-white">{b.customerName}</p>
-                        <p className="text-[10px] text-slate-400">{b.phone}</p>
+                      <td className="py-4 px-4">
+                        <p className="font-mono font-bold text-emerald-400 text-sm">{b.id}</p>
+                        <p className="font-bold text-white text-base">{b.customerName}</p>
+                        <p className="text-xs text-slate-400">{b.phone}</p>
                       </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-200">{b.serviceName}</td>
-                      <td className="py-3.5 px-4 text-slate-300">{b.staffName}</td>
-                      <td className="py-3.5 px-4 font-mono font-semibold text-slate-200">
-                        {b.date} {b.date === todayStr ? <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-sans ml-1">วันนี้</span> : ''}
+                      <td className="py-4 px-4 font-semibold text-slate-200 text-sm">{b.serviceName}</td>
+                      <td className="py-4 px-4 text-slate-300 font-medium text-sm">{b.staffName}</td>
+                      <td className="py-4 px-4 font-mono font-semibold text-slate-200 text-sm">
+                        {b.date} {b.date === todayStr ? <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-sans ml-1">วันนี้</span> : ''}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-emerald-300 font-semibold">{b.time} น.</td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-amber-400">฿{b.depositPrice}</td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-4 font-mono text-emerald-300 font-bold text-sm">{b.time} น.</td>
+                      <td className="py-4 px-4 font-mono font-extrabold text-amber-400 text-base">฿{b.depositPrice}</td>
+                      <td className="py-4 px-4">
                         {b.status === 'hold' && (
-                          <span className="bg-sky-500/10 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                          <span className="bg-sky-500/10 text-sky-300 border border-sky-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
                             hold (รอโอน)
                           </span>
                         )}
                         {b.status === 'pending_review' && (
-                          <span className="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            pending_review (รอตรวจสลิป)
+                          <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
+                            รอตรวจสลิป
                           </span>
                         )}
                         {b.status === 'confirmed' && (
-                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                          <span className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
                             confirmed (ยืนยันแล้ว)
                           </span>
                         )}
                         {b.status === 'completed' && (
-                          <span className="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            completed (ให้บริการแล้ว)
+                          <span className="bg-blue-500/10 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
+                            completed (เสร็จสิ้น)
                           </span>
                         )}
                         {b.status === 'cancelled' && (
-                          <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                          <span className="bg-rose-500/10 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
                             cancelled (ยกเลิกแล้ว)
                           </span>
                         )}
                         {b.status === 'no_show' && (
-                          <span className="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                          <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
                             no_show (ไม่มาตามนัด)
                           </span>
                         )}
                         {b.status === 'expired' && (
-                          <span className="bg-slate-500/10 text-slate-400 border border-slate-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                          <span className="bg-slate-500/10 text-slate-400 border border-slate-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
                             expired (หมดอายุ)
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        {b.status === 'pending_review' && (
-                          <button
-                            onClick={() => setSelectedSlipBooking(b)}
-                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 ml-auto shadow-md"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            ดูสลิป & อนุมัติ
-                          </button>
-                        )}
-                        {b.status === 'confirmed' && (
-                          <span className="text-emerald-400 font-medium text-[11px]">พร้อมให้บริการ</span>
-                        )}
+                      <td className="py-4 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {b.status === 'pending_review' && (
+                            <button
+                              onClick={() => setSelectedSlipBooking(b)}
+                              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 shadow-md"
+                            >
+                              <Eye className="w-4 h-4" />
+                              ดูสลิป & อนุมัติ
+                            </button>
+                          )}
+                          {b.status !== 'cancelled' && b.status !== 'completed' && b.status !== 'expired' && (
+                            <button
+                              onClick={() => handleCancelBooking(b.id)}
+                              className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-all"
+                              title="ยกเลิกคิวงานนี้"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              ยกเลิกคิว
+                            </button>
+                          )}
+                          {b.status === 'cancelled' && (
+                            <span className="text-slate-500 text-xs italic">ยกเลิกคิวแล้ว</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1393,13 +1409,23 @@ export default function AdminDashboard() {
       {/* SLIP VERIFICATION MODAL */}
       {selectedSlipBooking && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-fade-in">
-            <h3 className="text-base font-bold text-white">ตรวจสอบสลิปมัดจำ (#{selectedSlipBooking.id})</h3>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-fade-in relative">
+            {/* Top Right Close Button */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">ตรวจสอบสลิปมัดจำ (#{selectedSlipBooking.id})</h3>
+              <button
+                onClick={() => setSelectedSlipBooking(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all"
+                title="ปิดหน้าต่าง"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             
             <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-center relative">
               <img src={selectedSlipBooking.slipUrl} alt="Deposit Slip" className="max-h-64 object-contain mx-auto rounded-lg" />
               <div className="mt-2 bg-emerald-500/10 border border-emerald-500/30 p-2 rounded text-[10px] text-emerald-400 font-medium">
-                🛡️ ระบบอ่าน QR บนสลิป: ยอดโอน ฿{selectedSlipBooking.depositPrice}.00 ตรงกับ PromptPay ร้าน
+                🛡️ ยอดโอน ฿{selectedSlipBooking.depositPrice}.00 ตรงกับ PromptPay ร้าน
               </div>
             </div>
 
@@ -1409,18 +1435,28 @@ export default function AdminDashboard() {
               <p>ยอดเงินในสลิป: <span className="font-mono font-bold text-emerald-400">฿{selectedSlipBooking.depositPrice}.00</span></p>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="space-y-2 pt-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleRejectSlip(selectedSlipBooking.id)}
+                  className="w-1/2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold py-2.5 rounded-xl text-xs transition-all"
+                >
+                  สลิปปลอม/ไม่ตรง (ยกเลิก)
+                </button>
+                <button
+                  onClick={() => handleApproveSlip(selectedSlipBooking.id)}
+                  className="w-1/2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs shadow-lg transition-all"
+                >
+                  อนุมัติ & ยืนยันคิว
+                </button>
+              </div>
+
               <button
-                onClick={() => handleRejectSlip(selectedSlipBooking.id)}
-                className="w-1/2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold py-2.5 rounded-xl text-xs"
+                type="button"
+                onClick={() => setSelectedSlipBooking(null)}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold py-2 rounded-xl text-xs transition-all"
               >
-                สลิปปลอม/ไม่ตรง (ยกเลิก)
-              </button>
-              <button
-                onClick={() => handleApproveSlip(selectedSlipBooking.id)}
-                className="w-1/2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs shadow-lg"
-              >
-                อนุมัติ & ยืนยันคิว
+                ปิดหน้าต่าง (ยังไม่กดเลือก)
               </button>
             </div>
           </div>
