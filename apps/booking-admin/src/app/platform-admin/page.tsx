@@ -16,6 +16,7 @@ interface TenantShop {
   plan: 'free_trial' | 'basic_490' | 'pro_990';
   status: 'active' | 'past_due' | 'cancelled' | 'suspended';
   trialEndsAt: string;
+  nextBillingDate: string;
   bookingsThisMonth: number;
   maxBookingsQuota: number;
   topupBookings: number;
@@ -33,6 +34,7 @@ const INITIAL_TENANT_SHOPS: TenantShop[] = [
     plan: 'free_trial',
     status: 'active',
     trialEndsAt: '2026-08-19',
+    nextBillingDate: '2026-08-19',
     bookingsThisMonth: 12,
     maxBookingsQuota: 50,
     topupBookings: 0,
@@ -48,6 +50,7 @@ const INITIAL_TENANT_SHOPS: TenantShop[] = [
     plan: 'pro_990',
     status: 'active',
     trialEndsAt: '2026-05-10',
+    nextBillingDate: '2026-09-10',
     bookingsThisMonth: 340,
     maxBookingsQuota: 500,
     topupBookings: 100,
@@ -63,6 +66,7 @@ const INITIAL_TENANT_SHOPS: TenantShop[] = [
     plan: 'basic_490',
     status: 'active',
     trialEndsAt: '2026-06-01',
+    nextBillingDate: '2026-09-01',
     bookingsThisMonth: 92,
     maxBookingsQuota: 100,
     topupBookings: 0,
@@ -78,6 +82,7 @@ const INITIAL_TENANT_SHOPS: TenantShop[] = [
     plan: 'free_trial',
     status: 'cancelled',
     trialEndsAt: '2026-07-20',
+    nextBillingDate: '2026-07-20',
     bookingsThisMonth: 48,
     maxBookingsQuota: 50,
     topupBookings: 0,
@@ -129,6 +134,19 @@ export default function PlatformSuperAdminPage() {
   const handleAddTopupBookings = (shopId: string, amount: number = 100) => {
     setShops(prev => prev.map(s => s.id === shopId ? { ...s, topupBookings: s.topupBookings + amount } : s));
     triggerNotice(`เติมโควตาเสริม +${amount} คิว เรียบร้อยแล้ว`);
+  };
+
+  const handleExtendDays = (shopId: string, days: number = 14) => {
+    setShops(prev => prev.map(s => {
+      if (s.id === shopId) {
+        const currentDate = new Date(s.nextBillingDate.split(' ')[0] || '2026-08-19');
+        currentDate.setDate(currentDate.getDate() + days);
+        const newDateStr = currentDate.toISOString().split('T')[0];
+        return { ...s, nextBillingDate: newDateStr, trialEndsAt: newDateStr };
+      }
+      return s;
+    }));
+    triggerNotice(`ขยายเวลาแพ็กเกจ +${days} วัน เรียบร้อยแล้ว`);
   };
 
   const handleToggleShopStatus = (shopId: string) => {
@@ -284,6 +302,7 @@ export default function PlatformSuperAdminPage() {
                 <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
                   <th className="py-3 px-4">ร้านค้า / เจ้าของร้าน</th>
                   <th className="py-3 px-4">แพ็กเกจปัจจุบัน</th>
+                  <th className="py-3 px-4">วันหมดอายุ / ตัดรอบบิล</th>
                   <th className="py-3 px-4">โควตาคิวจองในเดือนนี้</th>
                   <th className="py-3 px-4">การส่ง LINE</th>
                   <th className="py-3 px-4">สถานะบัญชี</th>
@@ -308,7 +327,7 @@ export default function PlatformSuperAdminPage() {
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {shop.plan === 'free_trial' && (
                           <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block">
-                            🎁 Free Trial (หมดอายุ {shop.trialEndsAt})
+                            🎁 Free Trial
                           </span>
                         )}
                         {shop.plan === 'basic_490' && (
@@ -321,6 +340,18 @@ export default function PlatformSuperAdminPage() {
                             🚀 Pro Plan (990/ด.)
                           </span>
                         )}
+                      </td>
+
+                      {/* Expiration & Renewal Date Column */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="space-y-0.5">
+                          <p className="font-mono text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                            📅 {shop.nextBillingDate}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {shop.plan === 'free_trial' ? '🗓️ สิ้นสุด Trial 14 วัน' : '🔄 วันตัดรอบบิลถัดไป'}
+                          </p>
+                        </div>
                       </td>
 
                       {/* Quota Usage */}
@@ -375,6 +406,13 @@ export default function PlatformSuperAdminPage() {
                       {/* Manual Actions */}
                       <td className="py-3.5 px-4">
                         <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                          <button
+                            onClick={() => handleExtendDays(shop.id, 14)}
+                            className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm"
+                            title="ขยายเวลาแพ็กเกจเพิ่ม 14 วัน"
+                          >
+                            +14 วัน
+                          </button>
                           <button
                             onClick={() => handleAddTopupBookings(shop.id, 100)}
                             className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm"
