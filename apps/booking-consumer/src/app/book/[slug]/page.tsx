@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { 
   Calendar, Clock, User, CheckCircle2, QrCode, Upload, ShieldCheck, 
@@ -71,6 +71,25 @@ export default function BookingPage() {
   const [savedQrNotice, setSavedQrNotice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  // 15-Minute Countdown Timer (900 seconds)
+  const [timeLeft, setTimeLeft] = useState<number>(900);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (step === 3 || bookingSuccess) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, bookingSuccess]);
+
+  const formatCountdown = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   const shopPhone = '081-234-5678';
   const promptpayNumber = '081-234-5678';
@@ -203,10 +222,13 @@ export default function BookingPage() {
                 href="https://line.me/R/oaMessage/@central_booking_oa/?%E0%B8%9C%E0%B8%B9%E0%B8%81%E0%B8%84%E0%B8%B4%E0%B8%A7%20BK-7K2M9Q-9X4K"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all"
+                className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-0.5 shadow-lg shadow-emerald-950/50 transition-all text-center"
               >
-                <MessageCircle className="w-5 h-5" />
-                รับใบนัด & ผูกการแจ้งเตือนผ่าน Central LINE OA (@central_booking_oa)
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5 flex-shrink-0" />
+                  <span>รับแจ้งเตือนผ่านไลน์ เพื่อไม่พลาดคิวของท่าน</span>
+                </div>
+                <span className="text-[11px] font-normal text-emerald-100 opacity-90">เราจะแจ้งเตือนก่อนถึงเวลานัด</span>
               </a>
 
               <a
@@ -374,6 +396,15 @@ export default function BookingPage() {
                   <p className="text-xs text-slate-400">สแกน QR Code โอนมัดจำเพื่อล็อกคิวงานอัตโนมัติ</p>
                 </div>
 
+                {/* 15-Minute Countdown Timer Banner */}
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center space-y-1">
+                  <div className="flex items-center justify-center gap-1.5 text-amber-300 font-bold text-xs">
+                    <Clock className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
+                    <span>กรุณาโอนมัดจำภายใน <span className="font-mono text-sm font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">{formatCountdown(timeLeft)}</span> นาที</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">ระบบล็อกสล็อตเวลาไว้ให้ท่าน 15 นาที หากพ้นเวลานี้ คิวจะถูกปล่อยให้ลูกค้ารายอื่นโดยอัตโนมัติ</p>
+                </div>
+
                 {/* PromptPay Card */}
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 text-center relative overflow-hidden space-y-3">
                   <div className="absolute top-0 right-0 bg-emerald-500 text-slate-950 text-[10px] font-bold px-3 py-0.5 rounded-bl-lg">
@@ -410,11 +441,6 @@ export default function BookingPage() {
                         {copiedPromptpay ? 'คัดลอกแล้ว' : 'คัดลอกเลข'}
                       </button>
                     </div>
-                  </div>
-
-                  <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 flex items-center gap-2 text-left">
-                    <ShieldAlert className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                    <span>ระบบมีระบบสแกน QR บนสลิปและตรวจสอบสลิปปลอมอัตโนมัติ ป้องกันสลิปซ้ำซ้อน 100%</span>
                   </div>
                 </div>
 
