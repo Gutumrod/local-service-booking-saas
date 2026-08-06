@@ -60,5 +60,5 @@
 
 ## 📌 เอกสารอ้างอิงประกอบโครงการ
 1. **กติกาผลิตภัณฑ์ฉบับอนุมัติ (Master SSOT):** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
-2. **แผนธุรกิจ & โมเดลการเงิน:** [`OFFICIAL_BUSINESS_MODEL.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/OFFICIAL_BUSINESS_MODEL.md)
-3. **ข้อกำหนดราคา & สิทธิแพ็กเกจ:** [`PRICING_SPEC.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRICING_SPEC.md)
+2. **แผนธุรกิจ & โมเดลการเงิน:** [`OFFICIAL_BUSINESS_MODEL.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/business/OFFICIAL_BUSINESS_MODEL.md)
+3. **ข้อกำหนดราคา & สิทธิแพ็กเกจ:** [`PRICING_SPEC.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/business/PRICING_SPEC.md)

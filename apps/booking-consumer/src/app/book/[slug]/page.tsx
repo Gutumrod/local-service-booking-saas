@@ -167,24 +167,24 @@ export default function BookingPage() {
       {/* Main Content Area */}
       <main className="max-w-md mx-auto w-full px-4 py-6 flex-1">
         {bookingSuccess ? (
-          /* SUCCESS STATE WITH SHOP PHONE CONTACT */
-          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 text-center shadow-xl shadow-emerald-950/40 animate-fade-in space-y-5">
-            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-              <CheckCircle2 className="w-10 h-10" />
+          /* PENDING REVIEW / SUBMITTED STATE (PRODUCT_RULES_V1 SECTION 1.4) */
+          <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 text-center shadow-xl shadow-amber-950/40 animate-fade-in space-y-5">
+            <div className="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto border border-amber-500/30">
+              <Clock className="w-10 h-10 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white mb-1">ส่งสลิป & ยืนยันการจองเรียบร้อย!</h2>
-              <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">#{bookingCode}</span></p>
+              <h2 className="text-xl font-bold text-white mb-1">ได้รับสลิปแล้ว กำลังตรวจสอบการชำระเงิน</h2>
+              <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">BK-7K2M9Q</span></p>
             </div>
 
-            {/* Clean Receipt Card for Customer with Shop Phone */}
-            <div className="bg-slate-950 border border-emerald-500/30 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
+            {/* Receipt Card for Customer aligned with PRODUCT_RULES_V1 1.4 */}
+            <div className="bg-slate-950 border border-amber-500/30 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-white flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> ใบนัดหมายจองคิวสำเร็จ
+                  <Clock className="w-4 h-4 text-amber-400" /> สถานะคิวจอง
                 </span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold">
-                  อนุมัติแล้ว
+                <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold">
+                  pending_review
                 </span>
               </div>
 
@@ -192,21 +192,21 @@ export default function BookingPage() {
                 <p>บริการ: <span className="font-semibold text-white">{selectedService?.name}</span></p>
                 <p>พนักงาน: <span className="font-semibold text-white">{selectedStaff?.nickname}</span></p>
                 <p>เวลานัด: <span className="font-semibold text-emerald-400">{selectedDate} @ {selectedTime} น.</span></p>
-                <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit}.00 (โอนแล้ว)</span></p>
+                <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit}.00 (ส่งสลิปแล้ว)</span></p>
                 <p className="text-slate-400 pt-1">เบอร์สายตรงร้านค้า: <a href={`tel:${shopPhone.replace(/-/g, '')}`} className="font-mono font-bold text-amber-400 hover:underline">{shopPhone}</a></p>
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Central LINE OA Binding Button */}
             <div className="space-y-2">
               <a
-                href={lineOaUrl}
+                href="https://line.me/R/oaMessage/@central_booking_oa/?%E0%B8%9C%E0%B8%B9%E0%B8%81%E0%B8%84%E0%B8%B4%E0%B8%A7%20BK-7K2M9Q-9X4K"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all"
               >
                 <MessageCircle className="w-5 h-5" />
-                รับใบนัด & การแจ้งเตือนผ่าน LINE OA ร้าน (@goodcutsbarber)
+                รับใบนัด & ผูกการแจ้งเตือนผ่าน Central LINE OA (@central_booking_oa)
               </a>
 
               <a

@@ -307,3 +307,12 @@ https://line.me/R/oaMessage/@{central_oa_id}/?ผูกคิว%20{booking_code
 - แต้มสะสม / สมาชิก
 - รายงานเชิงลึก
 - ข้อความโต้ตอบสองทางใน LINE (บอทตอบคำถาม)
+
+---
+
+## 📌 เอกสารที่เกี่ยวข้องในระบบ (Document Map)
+- 🏠 **ดัชนีภาพรวมระบบ:** [`README.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/README.md)
+- 📄 **บรีฟสเปกทางเทคนิค Phase 1:** [`docs/technical/BRIEF_PHASE1_AGY.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE1_AGY.md)
+- 🛡️ **มาตรฐานความปลอดภัย:** [`docs/technical/ARCHITECTURE_SECURITY_STANDARD.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/ARCHITECTURE_SECURITY_STANDARD.md)
+- 🏆 **แผนธุรกิจ & การเงิน:** [`docs/business/OFFICIAL_BUSINESS_MODEL.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/business/OFFICIAL_BUSINESS_MODEL.md)
+- 💰 **ข้อกำหนดราคาแพ็กเกจ:** [`docs/business/PRICING_SPEC.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/business/PRICING_SPEC.md)

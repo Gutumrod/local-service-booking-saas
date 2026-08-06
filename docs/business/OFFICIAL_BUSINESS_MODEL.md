@@ -79,3 +79,11 @@
 - **รายรับจากร้านค้า Pro 1 ร้าน:** **990 บาท/เดือน**
 - **กำไรสุทธิต่อ 1 ร้านค้า Pro:** `990 - 18.32 = 971.68 บาท/เดือน (Margin 98.15%)`
 - **จุดคุ้มทุนทั้งระบบ (Break-even Point):** ขอเพียงมีลูกค้าสมัครแพ็กเกจ Pro **เพียง 2 ร้านค้าแรก** ระบบคืนทุนค่า LINE 1,605 บาททันที และสร้างกำไรสุทธิเพิ่มขึ้นตามจำนวนร้านค้า!
+
+---
+
+## 📌 เอกสารที่เกี่ยวข้องในระบบ (Document Map)
+- 📋 **กติกาผลิตภัณฑ์ฉบับอนุมัติ (Master SSOT):** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
+- 📄 **บรีฟสเปกทางเทคนิค Phase 1:** [`BRIEF_PHASE1_AGY.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE1_AGY.md)
+- 💰 **ข้อกำหนดราคาแพ็กเกจ:** [`PRICING_SPEC.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/business/PRICING_SPEC.md)
+- 🏠 **ดัชนีภาพรวมระบบ:** [`README.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/README.md)

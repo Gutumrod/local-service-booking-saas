@@ -77,3 +77,11 @@
    - Stripe Customer Portal สำหรับเปลี่ยนบัตร ดูใบแจ้งหนี้ หรือยกเลิก
    - **Stripe Webhook** เชื่อมตรงกับ Supabase Edge Function เพื่ออัปเดตตาราง `subscriptions`
 3. **ข้อห้าม:** ห้ามทำระบบรับเงินสองเจ้าพร้อมกันตั้งแต่แรก เพื่อป้องกันปัญหา Webhook รวน, Reconciliation ล้มเหลว, Refund ซับซ้อน และบิลสถานะซ้ำซ้อน
+
+---
+
+## 📌 เอกสารที่เกี่ยวข้องในระบบ (Document Map)
+- 📋 **กติกาผลิตภัณฑ์ฉบับอนุมัติ (Master SSOT):** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
+- 🏆 **แผนธุรกิจ & โมเดลการเงิน:** [`OFFICIAL_BUSINESS_MODEL.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/business/OFFICIAL_BUSINESS_MODEL.md)
+- 📄 **บรีฟสเปกทางเทคนิค Phase 1:** [`BRIEF_PHASE1_AGY.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE1_AGY.md)
+- 🏠 **ดัชนีภาพรวมระบบ:** [`README.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/README.md)

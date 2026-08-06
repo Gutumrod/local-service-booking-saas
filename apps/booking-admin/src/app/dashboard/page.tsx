@@ -19,7 +19,8 @@ interface Booking {
   time: string;
   totalPrice: number;
   depositPrice: number;
-  status: 'pending_deposit' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'hold' | 'pending_review' | 'confirmed' | 'completed' | 'cancelled' | 'no_show' | 'expired';
+  depositStatus: 'not_required' | 'awaiting' | 'submitted' | 'verified' | 'rejected' | 'refunded';
   slipUrl?: string;
 }
 
@@ -59,7 +60,7 @@ const INITIAL_SERVICES: ServiceItem[] = [
 
 const INITIAL_BOOKINGS: Booking[] = [
   {
-    id: 'BK-1042',
+    id: 'BK-7K2M9Q',
     customerName: 'คุณสมชาย ใจดี',
     phone: '081-234-5678',
     serviceName: 'ตัดผมชายพรีเมียม + สระเซ็ต',
@@ -68,11 +69,12 @@ const INITIAL_BOOKINGS: Booking[] = [
     time: '11:30',
     totalPrice: 350,
     depositPrice: 100,
-    status: 'pending_deposit',
+    status: 'pending_review',
+    depositStatus: 'submitted',
     slipUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400'
   },
   {
-    id: 'BK-1043',
+    id: 'BK-8P3R1W',
     customerName: 'คุณเกริกฤทธิ์ มีสุข',
     phone: '082-333-4455',
     serviceName: 'สปาหนังศีรษะแบบล้ำลึก',
@@ -81,10 +83,11 @@ const INITIAL_BOOKINGS: Booking[] = [
     time: '14:00',
     totalPrice: 790,
     depositPrice: 200,
-    status: 'confirmed'
+    status: 'confirmed',
+    depositStatus: 'verified'
   },
   {
-    id: 'BK-1044',
+    id: 'BK-9M4L2X',
     customerName: 'คุณณัฐชนนท์ วงศ์สว่าง',
     phone: '085-777-8899',
     serviceName: 'ดัดวอลลุ่มสไตล์เกาหลี',
@@ -93,11 +96,12 @@ const INITIAL_BOOKINGS: Booking[] = [
     time: '10:30',
     totalPrice: 1200,
     depositPrice: 300,
-    status: 'pending_deposit',
+    status: 'pending_review',
+    depositStatus: 'submitted',
     slipUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400'
   },
   {
-    id: 'BK-1041',
+    id: 'BK-5A6B7C',
     customerName: 'คุณวิชัย สุขสันต์',
     phone: '089-987-6543',
     serviceName: 'ดัดวอลลุ่มสไตล์เกาหลี',
@@ -106,7 +110,8 @@ const INITIAL_BOOKINGS: Booking[] = [
     time: '13:00',
     totalPrice: 1200,
     depositPrice: 300,
-    status: 'confirmed'
+    status: 'confirmed',
+    depositStatus: 'verified'
   }
 ];
 
@@ -163,6 +168,7 @@ export default function AdminDashboard() {
   const [promptpayNumber, setPromptpayNumber] = useState('081-234-5678');
   const [promptpayName, setPromptpayName] = useState('บจก. กู้ด คัทส์ (Good Cuts Co., Ltd.)');
   const [lineOaId, setLineOaId] = useState('@goodcutsbarber');
+  const [lineChannelToken, setLineChannelToken] = useState('');
 
   // Special Holidays
   const [specialHolidayDate, setSpecialHolidayDate] = useState('');
@@ -181,7 +187,7 @@ export default function AdminDashboard() {
   const todayStr = '2026-08-05';
   const totalToday = bookings.filter(b => b.date === todayStr).length;
   const totalUpcoming = bookings.filter(b => b.date > todayStr).length;
-  const pendingDeposit = bookings.filter(b => b.status === 'pending_deposit').length;
+  const pendingDeposit = bookings.filter(b => b.status === 'pending_review').length;
   const depositCollected = bookings.reduce((sum, b) => sum + (b.status === 'confirmed' ? b.depositPrice : 0), 0);
 
   const filteredBookings = bookings.filter(b => {
@@ -485,24 +491,44 @@ export default function AdminDashboard() {
                       <td className="py-3.5 px-4 font-mono text-emerald-300 font-semibold">{b.time} น.</td>
                       <td className="py-3.5 px-4 font-mono font-bold text-amber-400">฿{b.depositPrice}</td>
                       <td className="py-3.5 px-4">
-                        {b.status === 'pending_deposit' && (
+                        {b.status === 'hold' && (
+                          <span className="bg-sky-500/10 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                            hold (รอโอน)
+                          </span>
+                        )}
+                        {b.status === 'pending_review' && (
                           <span className="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            รออนุมัติสลิป
+                            pending_review (รอตรวจสลิป)
                           </span>
                         )}
                         {b.status === 'confirmed' && (
                           <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            ยืนยันคิวแล้ว
+                            confirmed (ยืนยันแล้ว)
+                          </span>
+                        )}
+                        {b.status === 'completed' && (
+                          <span className="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                            completed (ให้บริการแล้ว)
                           </span>
                         )}
                         {b.status === 'cancelled' && (
                           <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            ยกเลิกแล้ว
+                            cancelled (ยกเลิกแล้ว)
+                          </span>
+                        )}
+                        {b.status === 'no_show' && (
+                          <span className="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                            no_show (ไม่มาตามนัด)
+                          </span>
+                        )}
+                        {b.status === 'expired' && (
+                          <span className="bg-slate-500/10 text-slate-400 border border-slate-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
+                            expired (หมดอายุ)
                           </span>
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        {b.status === 'pending_deposit' && (
+                        {b.status === 'pending_review' && (
                           <button
                             onClick={() => setSelectedSlipBooking(b)}
                             className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 ml-auto shadow-md"
@@ -1096,24 +1122,46 @@ export default function AdminDashboard() {
                     <h3 className="font-bold text-sm text-white">ตั้งค่า LINE Official Account (LINE OA)</h3>
                   </div>
                   <span className="text-[10px] bg-[#06C755]/20 text-[#06C755] border border-[#06C755]/30 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> Server Secured
+                    <Lock className="w-3 h-3" /> Hybrid Dual-Channel
                   </span>
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1 font-semibold">LINE OA ID ร้านค้า (Public ID) *</label>
+                  <label className="text-xs text-slate-300 block mb-1 font-semibold">
+                    LINE OA ID ร้านค้า / แฮนเดิลส่วนตัว (Optional)
+                  </label>
                   <input
                     type="text"
+                    placeholder="เช่น @goodcutsbarber"
                     value={lineOaId}
                     onChange={(e) => setLineOaId(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-[#06C755] font-bold focus:outline-none focus:border-[#06C755]"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    แสดงบนหน้าเว็บร้านค้า และใช้เชื่อมต่อ Custom Messaging API ในอนาคต
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-300 block mb-1 font-semibold">
+                    Custom Messaging API Channel Token (Optional Advanced Setup)
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="ใส่ Channel Access Token หากต้องการยิงจาก LINE Developers ร้านโดยตรง"
+                    value={lineChannelToken}
+                    onChange={(e) => setLineChannelToken(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-[#06C755]"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    หากเว้นว่างไว้ ระบบจะใช้ <strong>Central LINE Bot (@central_booking_oa)</strong> ยิงแจ้งเตือนใบนัดให้ฟรี 0-Friction
+                  </p>
                 </div>
 
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 text-xs text-slate-300 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-[11px]">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    สถานะการเชื่อมต่อ: บัญชี LINE OA ทำงานปกติ (Protected)
+                    สถานะปัจจุบัน: พร้อมใช้งานผ่าน Central LINE Bot (0-Friction)
                   </div>
                 </div>
 
