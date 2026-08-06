@@ -300,13 +300,13 @@ export default function PlatformSuperAdminPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4">ร้านค้า / เจ้าของร้าน</th>
-                  <th className="py-3 px-4">แพ็กเกจปัจจุบัน</th>
-                  <th className="py-3 px-4">วันหมดอายุ / ตัดรอบบิล</th>
-                  <th className="py-3 px-4">โควตาคิวจองในเดือนนี้</th>
-                  <th className="py-3 px-4">การส่ง LINE</th>
-                  <th className="py-3 px-4">สถานะบัญชี</th>
-                  <th className="py-3 px-4 text-right">การจัดการสิทธิ์ (Manual Action)</th>
+                  <th className="py-3 px-4 whitespace-nowrap">ร้านค้า / เจ้าของร้าน</th>
+                  <th className="py-3 px-4 whitespace-nowrap">แพ็กเกจปัจจุบัน</th>
+                  <th className="py-3 px-4 whitespace-nowrap">วันหมดอายุ / ตัดรอบบิล</th>
+                  <th className="py-3 px-4 whitespace-nowrap">โควตาคิวจองในเดือนนี้</th>
+                  <th className="py-3 px-4 whitespace-nowrap">ช่องทางส่ง LINE</th>
+                  <th className="py-3 px-4 whitespace-nowrap">สถานะบัญชี</th>
+                  <th className="py-3 px-4 whitespace-nowrap text-right">การจัดการสิทธิ์ (Manual Action)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -377,14 +377,14 @@ export default function PlatformSuperAdminPage() {
                       </td>
 
                       {/* LINE Channel Type */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {shop.lineChannelType === 'central' ? (
-                          <span className="bg-[#06C755]/10 text-[#06C755] border border-[#06C755]/30 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            Central Bot ({shop.lineMessagesThisMonth} ข้อความ)
+                          <span className="bg-[#06C755]/10 text-[#06C755] border border-[#06C755]/30 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap inline-block">
+                            LINE กลาง ({shop.lineMessagesThisMonth} ข้อความ)
                           </span>
                         ) : (
-                          <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            Custom Shop LINE ({shop.lineMessagesThisMonth} ข้อความ)
+                          <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap inline-block">
+                            LINE ร้านค้า ({shop.lineMessagesThisMonth} ข้อความ)
                           </span>
                         )}
                       </td>
