@@ -489,45 +489,45 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-4 px-4 font-semibold text-slate-200 text-sm">{b.serviceName}</td>
                       <td className="py-4 px-4 text-slate-300 font-medium text-sm">{b.staffName}</td>
-                      <td className="py-4 px-4 font-mono font-semibold text-slate-200 text-sm">
+                      <td className="py-4 px-4 font-mono font-semibold text-slate-200 text-sm whitespace-nowrap">
                         {b.date} {b.date === todayStr ? <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-sans ml-1">วันนี้</span> : ''}
                       </td>
-                      <td className="py-4 px-4 font-mono text-emerald-300 font-bold text-sm">{b.time} น.</td>
-                      <td className="py-4 px-4 font-mono font-extrabold text-amber-400 text-base">฿{b.depositPrice}</td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-4 font-mono text-emerald-300 font-bold text-sm whitespace-nowrap">{b.time} น.</td>
+                      <td className="py-4 px-4 font-mono font-extrabold text-amber-400 text-base whitespace-nowrap">฿{b.depositPrice}</td>
+                      <td className="py-4 px-4 whitespace-nowrap">
                         {b.status === 'hold' && (
-                          <span className="bg-sky-500/10 text-sky-300 border border-sky-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
-                            hold (รอโอน)
+                          <span className="bg-sky-500/10 text-sky-300 border border-sky-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
+                            รอโอนมัดจำ
                           </span>
                         )}
                         {b.status === 'pending_review' && (
-                          <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
+                          <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
                             รอตรวจสลิป
                           </span>
                         )}
                         {b.status === 'confirmed' && (
-                          <span className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
-                            confirmed (ยืนยันแล้ว)
+                          <span className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
+                            ยืนยันคิวแล้ว
                           </span>
                         )}
                         {b.status === 'completed' && (
-                          <span className="bg-blue-500/10 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
-                            completed (เสร็จสิ้น)
+                          <span className="bg-blue-500/10 text-blue-300 border border-blue-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
+                            ให้บริการเสร็จแล้ว
                           </span>
                         )}
                         {b.status === 'cancelled' && (
-                          <span className="bg-rose-500/10 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
-                            cancelled (ยกเลิกแล้ว)
+                          <span className="bg-rose-500/10 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
+                            ยกเลิกแล้ว
                           </span>
                         )}
                         {b.status === 'no_show' && (
-                          <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
-                            no_show (ไม่มาตามนัด)
+                          <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
+                            ไม่มาตามนัด
                           </span>
                         )}
                         {b.status === 'expired' && (
-                          <span className="bg-slate-500/10 text-slate-400 border border-slate-500/30 px-2.5 py-1 rounded-md text-xs font-semibold">
-                            expired (หมดอายุ)
+                          <span className="bg-slate-500/10 text-slate-400 border border-slate-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
+                            หมดอายุ
                           </span>
                         )}
                       </td>
