@@ -33,8 +33,9 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 ## 🛠️ Architecture
 
-- **Consumer Web App (`apps/booking-consumer`):** Mobile-first customer booking portal + LINE messaging auto-link binding.
-- **Store Owner Dashboard (`apps/booking-admin`):** Admin panel for managing bookings, staff schedules, deposit verification, and billing.
+- **Consumer Web App (`apps/booking-consumer`):** Mobile-first customer booking portal (`/book/[slug]`) + LINE messaging auto-link binding.
+- **Store Owner Dashboard (`apps/booking-admin`):** Admin panel (`/dashboard`) for managing bookings, staff schedules, deposit verification, and billing.
+- **Platform Super Admin Panel (`apps/booking-admin/src/app/platform-admin`):** CEO Control Center (`/platform-admin`) for managing tenant shops, MRR analytics, subscription overrides, shop cancellation controls, and Central LINE OA traffic monitoring.
 - **Database & Auth (`supabase/`):** Multi-tenant PostgreSQL database (`https://gyleqrjdzwwlqierdwcy.supabase.co`) with Row-Level Security (RLS), Postgres Range Exclusion Constraints, and custom RPCs.
 
 ---
