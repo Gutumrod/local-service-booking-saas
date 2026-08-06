@@ -167,7 +167,7 @@ function RegisterFormContent() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
                         <span>URL สลักลิงก์ร้านค้า (Shop URL Slug) *</span>
-                        <span className="text-[10px] text-slate-400 font-normal">แก้ไขได้ (ใช้ภาษาอังกฤษ a-z, 0-9 และขีดกลาง -)</span>
+                        <span className="text-[10px] text-slate-400 font-normal">แก้ไขได้ (ใช้ตัวอักษร a-z, 0-9 และขีดกลาง -)</span>
                       </label>
                       <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-400 font-mono">
                         <Globe className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
@@ -181,6 +181,9 @@ function RegisterFormContent() {
                           className="bg-transparent font-bold text-amber-400 focus:outline-none flex-1 font-mono"
                         />
                       </div>
+                      <p className="text-[10px] text-amber-400/90 font-medium pt-0.5">
+                        💡 หมายเหตุ: URL ใช้ภาษาอังกฤษเพื่อป้องกันการแปลงภาษาผิด
+                      </p>
                     </div>
 
                     {/* FREE-TEXT BUSINESS CATEGORY WITH QUICK SUGGESTION CHIPS */}
