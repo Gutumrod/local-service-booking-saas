@@ -1288,15 +1288,14 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                    <p className="font-bold text-slate-200">สิ่งที่ได้รับ:</p>
+                    <p className="font-bold text-slate-200">สิ่งที่ได้รับในแพ็กเกจ:</p>
                     <ul className="space-y-2 text-[11px]">
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>50 คิว</strong></li>
                       <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>5 คน</strong></li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
-                      <li className="flex items-center gap-2 text-amber-300 font-semibold"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> แจ้งเตือน LINE OA (ทดลองใช้)</li>
-                      <li className="flex items-center gap-2 text-amber-300 font-semibold"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> ตรวจสลิปออโต้ (ทดลอง 10 ครั้ง)</li>
+                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนใบนัดผ่าน LINE กลาง</li>
                     </ul>
                   </div>
                 </div>
@@ -1328,16 +1327,15 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                    <p className="font-bold text-slate-200">สิ่งที่ได้รับ:</p>
+                    <p className="font-bold text-slate-200">สิ่งที่ได้รับในแพ็กเกจ:</p>
                     <ul className="space-y-2 text-[11px]">
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>100 คิว/เดือน</strong></li>
                       <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>5 คน</strong></li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
+                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนใบนัดผ่าน LINE กลาง</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตรวจสอบสลิปด้วยตนเองผ่าน Dashboard</li>
-                      <li className="flex items-center gap-2 text-rose-400 line-through opacity-70"><XCircle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" /> แจ้งเตือน LINE OA อัตโนมัติ</li>
-                      <li className="flex items-center gap-2 text-rose-400 line-through opacity-70"><XCircle className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" /> ระบบตรวจสอบสลิปอัตโนมัติ</li>
                     </ul>
                   </div>
                 </div>
@@ -1352,14 +1350,14 @@ export default function AdminDashboard() {
               {/* PRO TIER */}
               <div className="bg-slate-900 border-2 border-emerald-500 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative shadow-xl shadow-emerald-950/40">
                 <span className="absolute -top-3 right-6 bg-emerald-500 text-slate-950 text-[10px] font-extrabold px-3 py-0.5 rounded-full shadow-md">
-                  คุ้มค่าที่สุด (Recommended)
+                  แนะนำสูงสุด (Recommended)
                 </span>
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-extrabold text-lg text-white">🚀 Pro</h3>
-                      <p className="text-[11px] text-emerald-400 font-medium">สำหรับร้านหลายช่าง / ลดงานแอดมิน</p>
+                      <p className="text-[11px] text-emerald-400 font-medium">สำหรับร้านหลายช่าง / แบรนด์พรีเมียม</p>
                     </div>
                   </div>
 
@@ -1376,10 +1374,10 @@ export default function AdminDashboard() {
                     <ul className="space-y-2 text-[11px]">
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>500 คิว/เดือน</strong></li>
                       <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>10 คน</strong></li>
-                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนผ่าน LINE OA อัตโนมัติ</li>
-                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตรวจสลิปอัตโนมัติ <strong>100 ครั้ง/เดือน</strong></li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ส่งข้อความแจ้งเตือนก่อนถึงวันนัด</li>
+                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนผ่าน LINE กลาง หรือ Custom LINE OA</li>
+                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนล่วงหน้า 1 ชั่วโมงก่อนเวลานัด</li>
                       <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รายงานสรุปคิว รายได้ & ประวัติลูกค้า</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Priority Support การดูแลเป็นพิเศษ</li>
                     </ul>
                   </div>
                 </div>
