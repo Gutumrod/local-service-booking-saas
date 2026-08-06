@@ -305,19 +305,19 @@ export default function PlatformSuperAdminPage() {
                       </td>
 
                       {/* Plan status */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         {shop.plan === 'free_trial' && (
-                          <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">
+                          <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block">
                             🎁 Free Trial (หมดอายุ {shop.trialEndsAt})
                           </span>
                         )}
                         {shop.plan === 'basic_490' && (
-                          <span className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded text-[10px] font-bold">
+                          <span className="bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block">
                             ⚡ Basic Starter (490/ด.)
                           </span>
                         )}
                         {shop.plan === 'pro_990' && (
-                          <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded text-[10px] font-bold">
+                          <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block">
                             🚀 Pro Plan (990/ด.)
                           </span>
                         )}
