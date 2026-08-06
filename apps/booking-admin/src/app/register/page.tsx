@@ -53,15 +53,30 @@ function RegisterFormContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Auto generate slug from shop name
+  // Auto generate slug from shop name (handles English & Thai gracefully)
   const handleShopNameChange = (val: string) => {
     setShopName(val);
-    const generatedSlug = val
+    const sanitized = val
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-');
-    setShopSlug(generatedSlug || 'my-shop');
+
+    if (sanitized) {
+      setShopSlug(sanitized);
+    } else if (val.trim()) {
+      // If shop name is in Thai, create a clean readable default slug
+      setShopSlug('shop-' + Math.floor(100 + Math.random() * 900));
+    } else {
+      setShopSlug('your-shop-slug');
+    }
+  };
+
+  const handleSlugInputChange = (val: string) => {
+    const cleanSlug = val
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '');
+    setShopSlug(cleanSlug);
   };
 
   const handleNextStep = (e: React.FormEvent) => {
@@ -148,14 +163,24 @@ function RegisterFormContent() {
                       />
                     </div>
 
-                    {/* URL Slug Preview */}
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80 text-xs flex items-center justify-between gap-2">
-                      <span className="text-slate-400 flex items-center gap-1.5">
-                        <Globe className="w-4 h-4 text-emerald-400" /> ลิงก์หน้าจองออนไลน์ลูกค้า:
-                      </span>
-                      <span className="font-mono text-emerald-400 font-bold bg-slate-900 px-2.5 py-1 rounded border border-slate-800">
-                        http://localhost:3000/book/<span className="text-amber-400">{shopSlug || 'your-shop-slug'}</span>
-                      </span>
+                    {/* URL Slug Editable Input & Live Preview */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                        <span>URL สลักลิงก์ร้านค้า (Shop URL Slug) *</span>
+                        <span className="text-[10px] text-slate-400 font-normal">แก้ไขได้ (ใช้ภาษาอังกฤษ a-z, 0-9 และขีดกลาง -)</span>
+                      </label>
+                      <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-400 font-mono">
+                        <Globe className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
+                        <span className="hidden sm:inline text-slate-500">http://localhost:3000/book/</span>
+                        <input
+                          required
+                          type="text"
+                          placeholder="good-cuts-barber"
+                          value={shopSlug}
+                          onChange={(e) => handleSlugInputChange(e.target.value)}
+                          className="bg-transparent font-bold text-amber-400 focus:outline-none flex-1 font-mono"
+                        />
+                      </div>
                     </div>
 
                     {/* FREE-TEXT BUSINESS CATEGORY WITH QUICK SUGGESTION CHIPS */}
