@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { 
   Calendar, Clock, User, CheckCircle2, QrCode, Upload, ShieldCheck, 
   ChevronRight, Sparkles, MessageCircle, AlertTriangle, Coffee, CalendarOff,
-  Copy, Download, Check, ShieldAlert, Send, PhoneCall, Phone
+  Copy, Download, Check, ShieldAlert, Send, PhoneCall, Phone, RefreshCw
 } from 'lucide-react';
 import { createCustomerBookingFlex } from '../../../lib/line-flex';
 
@@ -76,13 +76,13 @@ export default function BookingPage() {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (step === 3 || bookingSuccess) {
+    if (step === 3 && !bookingSuccess && timeLeft > 0) {
       timer = setInterval(() => {
         setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [step, bookingSuccess]);
+  }, [step, bookingSuccess, timeLeft]);
 
   const formatCountdown = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -102,6 +102,14 @@ export default function BookingPage() {
   };
 
   const handleSaveQr = () => {
+    const qrUrl = `https://promptpay.io/${promptpayNumber.replace(/[^0-9]/g, '')}/${selectedService?.deposit || 100}.png`;
+    const link = document.createElement('a');
+    link.href = qrUrl;
+    link.download = `PromptPay-QR-Deposit-${selectedService?.deposit || 100}THB.png`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     setSavedQrNotice(true);
     setTimeout(() => setSavedQrNotice(false), 2000);
   };
@@ -396,13 +404,31 @@ export default function BookingPage() {
                 </div>
 
                 {/* 15-Minute Countdown Timer Banner */}
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center space-y-1">
-                  <div className="flex items-center justify-center gap-1.5 text-amber-300 font-bold text-xs">
-                    <Clock className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
-                    <span>กรุณาโอนมัดจำภายใน <span className="font-mono text-sm font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">{formatCountdown(timeLeft)}</span> นาที</span>
+                {timeLeft > 0 ? (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center space-y-1">
+                    <div className="flex items-center justify-center gap-1.5 text-amber-300 font-bold text-xs">
+                      <Clock className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
+                      <span>กรุณาโอนมัดจำภายใน <span className="font-mono text-sm font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">{formatCountdown(timeLeft)}</span> นาที</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">ระบบล็อกสล็อตเวลาไว้ให้ท่าน 15 นาที หากพ้นเวลานี้ คิวจะถูกปล่อยให้ลูกค้ารายอื่นโดยอัตโนมัติ</p>
                   </div>
-                  <p className="text-[10px] text-slate-400">ระบบล็อกสล็อตเวลาไว้ให้ท่าน 15 นาที หากพ้นเวลานี้ คิวจะถูกปล่อยให้ลูกค้ารายอื่นโดยอัตโนมัติ</p>
-                </div>
+                ) : (
+                  <div className="bg-rose-500/20 border-2 border-rose-500/40 rounded-xl p-4 text-center space-y-2 animate-fade-in">
+                    <div className="flex items-center justify-center gap-2 text-rose-300 font-extrabold text-xs">
+                      <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+                      <span>⏰ สล็อตเวลาที่คุณเลือกล็อกไว้หมดอายุแล้ว (เกิน 15 นาที)</span>
+                    </div>
+                    <p className="text-xs text-rose-200/80">ระบบได้ปล่อยคิวให้ลูกค้ารายอื่นแล้ว โปรดเลือกรอบเวลานัดหมายใหม่อีกครั้ง</p>
+                    <button
+                      type="button"
+                      onClick={() => { setTimeLeft(900); setStep(2); }}
+                      className="bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all mt-1 inline-flex items-center gap-1.5"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      เลือกรอบเวลาใหม่
+                    </button>
+                  </div>
+                )}
 
                 {/* PromptPay Card */}
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 text-center relative overflow-hidden space-y-3">
@@ -513,10 +539,10 @@ export default function BookingPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-2/3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40"
+                    disabled={isSubmitting || timeLeft === 0}
+                    className="w-2/3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40"
                   >
-                    {isSubmitting ? 'กำลังส่งข้อมูล...' : 'ยืนยันการจองคิว'}
+                    {timeLeft === 0 ? 'หมดเวลาล็อกคิว (โปรดเลือกเวลาใหม่)' : isSubmitting ? 'กำลังส่งข้อมูล...' : 'ยืนยันการจองคิว'}
                     <ShieldCheck className="w-4 h-4" />
                   </button>
                 </div>
