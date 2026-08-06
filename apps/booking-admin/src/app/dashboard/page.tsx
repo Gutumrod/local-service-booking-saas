@@ -735,14 +735,14 @@ export default function AdminDashboard() {
                     className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-rose-400 font-bold focus:outline-none focus:border-rose-500"
                   />
                 </div>
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-xs text-slate-300 block mb-1">เหตุผลวันหยุด</label>
+                <div className="w-72">
+                  <label className="text-xs text-slate-300 block mb-1 font-semibold">เหตุผลวันหยุด</label>
                   <input
                     type="text"
                     placeholder="เช่น วันแม่แห่งชาติ / สัมมนาประจำปี"
                     value={specialHolidayReason}
                     onChange={(e) => setSpecialHolidayReason(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500 font-medium"
                   />
                 </div>
                 <button
