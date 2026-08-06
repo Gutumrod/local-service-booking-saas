@@ -192,7 +192,7 @@ export default function BookingPage() {
               <Clock className="w-10 h-10 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white mb-1">ได้รับสลิปแล้ว กำลังตรวจสอบการชำระเงิน</h2>
+              <h2 className="text-xl font-bold text-white mb-1">ได้รับสลิปแล้ว รอตรวจสอบสลิป</h2>
               <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">BK-7K2M9Q</span></p>
             </div>
 
@@ -202,8 +202,8 @@ export default function BookingPage() {
                 <span className="text-xs font-bold text-white flex items-center gap-1">
                   <Clock className="w-4 h-4 text-amber-400" /> สถานะคิวจอง
                 </span>
-                <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded font-mono font-bold">
-                  pending_review
+                <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-md font-bold">
+                  รอตรวจสอบสลิป
                 </span>
               </div>
 
