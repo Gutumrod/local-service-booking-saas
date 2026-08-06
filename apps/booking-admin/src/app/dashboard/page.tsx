@@ -318,21 +318,12 @@ export default function AdminDashboard() {
             <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
             <span>คุณกำลังใช้งาน **Free Trial 14 วัน** (โควตาจอง 12/50 คิว • ตรวจสลิปออโต้ 3/10 ครั้ง)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setActiveTab('billing')}
-              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition-all shadow-md"
-            >
-              อัปเกรดเป็นแพ็กเกจเต็ม (เริ่มต้น 490 บ./เดือน)
-            </button>
-            <a
-              href="/platform-admin"
-              className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-              title="ระบบหลังบ้านกลางของผู้ให้บริการ (CEO Khun Free)"
-            >
-              👑 หลังบ้าน CEO
-            </a>
-          </div>
+          <button 
+            onClick={() => setActiveTab('billing')}
+            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition-all shadow-md"
+          >
+            อัปเกรดเป็นแพ็กเกจเต็ม (เริ่มต้น 490 บ./เดือน)
+          </button>
         </div>
       </div>
 
