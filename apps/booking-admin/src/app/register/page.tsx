@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { 
   Store, User, Phone, Mail, Lock, Sparkles, Check, ArrowRight, ArrowLeft, 
   QrCode, CreditCard, ShieldCheck, HelpCircle, Building, CheckCircle2, Globe
@@ -19,8 +19,11 @@ const SUGGESTED_CATEGORIES = [
   '🐾 อาบน้ำตัดขนสัตว์เลี้ยง (Pet Grooming)'
 ];
 
-export default function RegisterPage() {
+function RegisterFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get('plan');
+
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Step 1: Shop & Owner Info
@@ -35,6 +38,12 @@ export default function RegisterPage() {
   // Step 2: Plan Selection
   const [selectedPlan, setSelectedPlan] = useState<'free_trial' | 'basic_490' | 'pro_990'>('free_trial');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+
+  useEffect(() => {
+    if (planParam === 'basic_490' || planParam === 'pro_990' || planParam === 'free_trial') {
+      setSelectedPlan(planParam);
+    }
+  }, [planParam]);
 
   // Step 3: PromptPay Setup
   const [promptpayNumber, setPromptpayNumber] = useState('');
@@ -423,5 +432,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-xs">กำลังโหลด...</div>}>
+      <RegisterFormContent />
+    </Suspense>
   );
 }

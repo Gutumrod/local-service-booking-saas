@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
   Calendar, Users, DollarSign, CheckCircle2, XCircle, Eye, Clock, 
   Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
@@ -322,12 +323,12 @@ export default function AdminDashboard() {
             <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
             <span>คุณกำลังใช้งาน **Free Trial 14 วัน** (โควตาจอง 12/50 คิว • ตรวจสลิปออโต้ 3/10 ครั้ง)</span>
           </div>
-          <button 
-            onClick={() => setActiveTab('billing')}
-            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition-all shadow-md"
+          <Link 
+            href="/register?plan=basic_490"
+            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition-all shadow-md inline-block"
           >
             อัปเกรดเป็นแพ็กเกจเต็ม (เริ่มต้น 490 บ./เดือน)
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -1341,9 +1342,12 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-800/80">
-                  <button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700 transition-all">
+                  <Link 
+                    href="/register?plan=basic_490"
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700 transition-all block text-center"
+                  >
                     เลือกแพ็กเกจ Basic ({billingCycle === 'monthly' ? '฿490/เดือน' : '฿4,900/ปี'})
-                  </button>
+                  </Link>
                 </div>
               </div>
 
@@ -1383,9 +1387,12 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-800/80">
-                  <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-950/40 transition-all">
+                  <Link 
+                    href="/register?plan=pro_990"
+                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-950/40 transition-all block text-center"
+                  >
                     เลือกแพ็กเกจ Pro ({billingCycle === 'monthly' ? '฿990/เดือน' : '฿9,900/ปี'})
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
