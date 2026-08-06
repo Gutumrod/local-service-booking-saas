@@ -256,7 +256,7 @@ export default function RegisterPage() {
                         <div className={`w-3.5 h-3.5 bg-emerald-500 rounded-full transition-all ${billingCycle === 'yearly' ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                       <span className={`text-[11px] font-semibold ${billingCycle === 'yearly' ? 'text-amber-400 font-bold' : 'text-slate-500'}`}>
-                        รายปี <span className="bg-amber-500/20 text-amber-300 text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30">-2 เดือน</span>
+                        รายปี <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded border border-amber-500/30">ประหยัด 2 เดือน</span>
                       </span>
                     </div>
                   </div>
