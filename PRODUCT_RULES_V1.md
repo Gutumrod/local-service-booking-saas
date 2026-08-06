@@ -395,6 +395,20 @@ https://line.me/R/oaMessage/@{central_oa_id}/?ผูกคิว%20{booking_code
 
 ---
 
+## 17. บัคที่ทราบแล้ว รอแก้ตอนต่อ Backend จริง (Known Issues — Pre-Backend-Integration)
+
+> ตรวจพบระหว่างการรีวิวภาพรวมโปรเจค 2026-08-06 ก่อนเริ่มเฟสต่อหลังบ้าน (Supabase/Stripe/LINE) — บันทึกไว้กันลืมและกันสับสนว่า "เสร็จแล้ว" ทั้งที่ยังเป็น mockup
+
+1. **Frontend ยังไม่เชื่อม Backend จริงทั้งระบบ:** ทุกหน้า (`/register`, `/dashboard`, `/book/[slug]`) ใช้ `useState` เก็บข้อมูลใน browser เท่านั้น ไม่มีหน้าไหนเรียก Supabase client (`lib/supabase.ts` มีอยู่แต่ไม่ถูก import ใช้งานจริงเลยสักไฟล์) แม้ DB schema/RLS/RPC functions จะเขียนรองรับไว้ครบใน `supabase/migrations/` แล้วก็ตาม
+2. **Stripe ยังไม่ได้ติดตั้ง:** ไม่มี `stripe` package ใน dependencies และไม่มี checkout/webhook route ใดๆ — คำว่า "Stripe" ที่ปรากฏใน `dashboard/page.tsx` เป็นแค่ข้อความ UI
+3. **LINE Webhook รับ event ได้แต่ไม่ประมวลผลจริง:** `apps/*/src/app/api/line/webhook/route.ts` แค่ `console.log` ข้อความที่เข้ามา ไม่ได้ยิงข้อความกลับหรือผูก customer identity ตามที่ระบุในข้อ 9.1
+4. **Supabase project ใน README (`gyleqrjdzwwlqierdwcy.supabase.co`) หาไม่พบในบัญชีที่ต่อ MCP ปัจจุบัน** ต้องตรวจสอบว่ามีอยู่จริงหรือไม่ก่อนเริ่มต่อหลังบ้าน — ไม่มีไฟล์ `.env.local` ในทั้งสอง apps ด้วย
+5. **Slug generator สุ่มค่าใหม่ทุกครั้งที่พิมพ์ (`register/page.tsx`):** ถ้าชื่อร้านเป็นภาษาไทยล้วน ทุกตัวอักษรที่พิมพ์จะเรียก `Math.random()` ใหม่ ทำให้ slug กระพริบเปลี่ยนค่าทุก keystroke แทนที่จะ generate ครั้งเดียว
+6. **ช่อง Password ไม่บังคับความยาวจริง:** placeholder บอก "อย่างน้อย 8 ตัวอักษร" แต่ไม่มี `minLength={8}` กรอก 1 ตัวอักษรก็ผ่านฟอร์มได้
+7. **อัปโหลดสลิปไม่ validate ขนาด/ประเภทไฟล์ฝั่ง client:** ตามข้อ 4.3 ต้องจำกัด jpg/png/pdf ≤5MB แต่โค้ดปัจจุบันพึ่ง `accept="image/*"` ของ browser เท่านั้น ซึ่งเลี่ยงได้ง่าย
+
+---
+
 ## 📌 เอกสารที่เกี่ยวข้องในระบบ (Document Map)
 - 🏠 **ดัชนีภาพรวมระบบ:** [`README.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/README.md)
 - 📄 **บรีฟสเปกทางเทคนิค Phase 1:** [`docs/technical/BRIEF_PHASE1_AGY.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE1_AGY.md)
