@@ -131,6 +131,17 @@ export default function PlatformSuperAdminPage() {
     triggerNotice(`เติมโควตาเสริม +${amount} คิว เรียบร้อยแล้ว`);
   };
 
+  const handleToggleShopStatus = (shopId: string) => {
+    setShops(prev => prev.map(s => {
+      if (s.id === shopId) {
+        const nextStatus = s.status === 'active' ? 'cancelled' : 'active';
+        triggerNotice(nextStatus === 'cancelled' ? `ยกเลิก/ระงับบริการร้าน ${s.name} เรียบร้อยแล้ว` : `เปิดคืนบริการร้าน ${s.name} เรียบร้อยแล้ว`);
+        return { ...s, status: nextStatus };
+      }
+      return s;
+    }));
+  };
+
   const filteredShops = shops.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -379,6 +390,17 @@ export default function PlatformSuperAdminPage() {
                           <option value="basic_490">Basic 490</option>
                           <option value="pro_990">Pro 990</option>
                         </select>
+                        <button
+                          onClick={() => handleToggleShopStatus(shop.id)}
+                          className={`px-2 py-1 rounded text-[10px] font-bold border transition-all ${
+                            shop.status === 'active'
+                              ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
+                              : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                          }`}
+                          title={shop.status === 'active' ? 'ยกเลิก/ระงับบริการร้านค้า' : 'เปิดคืนบริการร้านค้า'}
+                        >
+                          {shop.status === 'active' ? 'ยกเลิกบริการ' : 'เปิดคืนบริการ'}
+                        </button>
                       </td>
                     </tr>
                   );
