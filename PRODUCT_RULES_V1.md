@@ -342,6 +342,16 @@ https://line.me/R/oaMessage/@{central_oa_id}/?ผูกคิว%20{booking_code
 7. **ภาษาป้ายกำกับ LINE OA ที่เป็นกันเอง:**
    - ปรับใช้คำว่า `"LINE กลางของระบบ (@central_booking_oa)"` แทนคำศัพท์เทคนิค และใช้ป้ายเตือนสีแดง (`text-rose-400 font-medium bg-rose-500/10`) เพื่อความชัดเจนสูงสุด
 
+## 13. กลยุทธ์การโฮสติ้งและ Deploy ระบบ (Deployment Architecture & Cloud Hosting Strategy)
+
+1. **การมุ่งสู่ Cloudflare Pages (Commercial-Allowed Free Deployment):**
+   - ในช่วงพัฒนา ทดสอบ และเปิดตัวเริ่มต้น (No Custom Domain Yet) ระบบจะมุ่ง Deploy บน **Cloudflare Pages** เพื่อใช้ประโยชน์จากสิทธิ์การใช้งานเชิงพาณิชย์ฟรี (Commercial Use Allowed 100%) และไม่จำกัด Bandwidth
+2. **โครงสร้าง URL ฟรีชั่วคราวช่วงทดสอบ (.pages.dev):**
+   - **หน้าจองฝั่งลูกค้า (`apps/booking-consumer`):** `https://local-booking-customer.pages.dev/book/good-cuts-barber`
+   - **หน้าหลังบ้านร้านค้า + CEO Panel (`apps/booking-admin`):** `https://local-booking-admin.pages.dev/dashboard` และ `/platform-admin`
+3. **การต่อยอดสู่ Custom Domain (Production Launch):**
+   - เมื่อพร้อมเปิดตัวทางการ ค่อยจดโดเมนหลัก 1 ชื่อ (เช่น `queueeasy.com` ~350-450 บาท/ปี) แล้วผูกผ่าน Cloudflare DNS 1-Click โดยอัตโนมัติ
+
 ---
 
 ## 📌 เอกสารที่เกี่ยวข้องในระบบ (Document Map)
