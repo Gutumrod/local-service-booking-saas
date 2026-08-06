@@ -715,58 +715,99 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-              <h2 className="text-base font-bold text-white mb-1 flex items-center gap-2">
-                <CalendarOff className="w-5 h-5 text-rose-400" />
-                กำหนดวันหยุดพิเศษร้านค้า (Special Shop Holidays)
-              </h2>
-              <p className="text-xs text-slate-400 mb-4">กำหนดวันหยุดนักขัตฤกษ์หรือวันหยุดเฉพาะกิจของร้านค้าเพื่อปิดไม่ให้ลูกค้าจองในวันดังกล่าว</p>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <CalendarOff className="w-5 h-5 text-rose-400" />
+                  กำหนดวันหยุดพิเศษร้านค้า (Special Shop Holidays)
+                </h2>
+                <p className="text-xs text-slate-400">กำหนดวันหยุดนักขัตฤกษ์หรือวันหยุดเฉพาะกิจของร้านค้าเพื่อปิดไม่ให้ลูกค้าจองในวันดังกล่าว</p>
+              </div>
 
-              <form onSubmit={handleAddHoliday} className="flex flex-wrap gap-3 items-end mb-6">
-                <div>
-                  <label className="text-xs text-slate-300 block mb-1 font-semibold">
-                    เลือกวันที่หยุดพิเศษ <span className="text-rose-400 font-mono">(ระบุปี ค.ศ. เช่น 2026-08-12)</span> *
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    value={specialHolidayDate}
-                    onChange={(e) => setSpecialHolidayDate(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-rose-400 font-bold focus:outline-none focus:border-rose-500"
-                  />
-                </div>
-                <div className="w-72">
-                  <label className="text-xs text-slate-300 block mb-1 font-semibold">เหตุผลวันหยุด</label>
-                  <input
-                    type="text"
-                    placeholder="เช่น วันแม่แห่งชาติ / สัมมนาประจำปี"
-                    value={specialHolidayReason}
-                    onChange={(e) => setSpecialHolidayReason(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500 font-medium"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow-md"
-                >
-                  <Plus className="w-4 h-4" />
-                  เพิ่มวันหยุดพิเศษ
-                </button>
-              </form>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+                {/* LEFT COLUMN: ADD HOLIDAY FORM */}
+                <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
+                  <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+                    <Plus className="w-4 h-4 text-rose-400" /> เพิ่มวันหยุดพิเศษใหม่
+                  </span>
 
-              <div className="space-y-2">
-                {holidaysList.map((h, i) => (
-                  <div key={i} className="flex justify-between items-center bg-slate-950 border border-rose-500/30 rounded-xl px-4 py-2.5 text-xs">
-                    <span className="font-mono text-rose-400 font-bold">{h.date}</span>
-                    <span className="text-slate-300">{h.reason}</span>
+                  <form onSubmit={handleAddHoliday} className="space-y-4">
+                    <div>
+                      <label className="text-xs text-slate-300 block mb-1 font-semibold">
+                        เลือกวันที่หยุดพิเศษ *
+                      </label>
+                      <input
+                        required
+                        type="date"
+                        value={specialHolidayDate}
+                        onChange={(e) => setSpecialHolidayDate(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-rose-400 font-bold focus:outline-none focus:border-rose-500"
+                      />
+                      <p className="text-[10px] text-rose-400/80 font-mono mt-1">*(ระบุปี ค.ศ. เช่น 2026-08-12)</p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-300 block mb-1 font-semibold">เหตุผลวันหยุด</label>
+                      <input
+                        type="text"
+                        placeholder="เช่น วันแม่แห่งชาติ / สัมมนาประจำปี"
+                        value={specialHolidayReason}
+                        onChange={(e) => setSpecialHolidayReason(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500 font-medium"
+                      />
+                    </div>
+
                     <button
-                      onClick={() => setHolidaysList(prev => prev.filter((_, idx) => idx !== i))}
-                      className="text-slate-500 hover:text-rose-400"
+                      type="submit"
+                      className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Plus className="w-4 h-4" />
+                      เพิ่มวันหยุดพิเศษ
                     </button>
+                  </form>
+                </div>
+
+                {/* RIGHT COLUMN: HOLIDAYS LIST */}
+                <div className="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-md flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                      <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <CalendarOff className="w-4 h-4 text-rose-400" /> รายการวันหยุดพิเศษทั้งหมด ({holidaysList.length} วัน)
+                      </span>
+                    </div>
+
+                    {holidaysList.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500 text-xs">
+                        <CalendarOff className="w-8 h-8 mx-auto mb-2 opacity-30 text-rose-400" />
+                        <p>ยังไม่มีวันหยุดพิเศษที่กำหนดไว้</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                        {holidaysList.map((h, i) => (
+                          <div key={i} className="flex justify-between items-center bg-slate-900 border border-rose-500/30 rounded-xl p-3 text-xs hover:border-rose-500/60 transition-all shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 font-mono font-bold px-2.5 py-1 rounded-lg text-xs">
+                                📅 {h.date}
+                              </span>
+                              <span className="text-slate-200 font-semibold">{h.reason || 'ร้านปิดทำการประจำปี'}</span>
+                            </div>
+                            <button
+                              onClick={() => setHolidaysList(prev => prev.filter((_, idx) => idx !== i))}
+                              className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-all"
+                              title="ลบวันหยุดนี้"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
+
+                  <p className="text-[10px] text-slate-500 border-t border-slate-800/80 pt-2">
+                    💡 ระบบจะปิดรับคิวจองในวันที่ระบุไว้ข้างต้นโดยอัตโนมัติในหน้าจองของลูกค้า
+                  </p>
+                </div>
               </div>
             </div>
           </div>
