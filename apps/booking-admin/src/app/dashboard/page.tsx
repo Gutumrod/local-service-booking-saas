@@ -1215,14 +1215,14 @@ export default function AdminDashboard() {
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-[#06C755]"
                   />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    หากเว้นว่างไว้ ระบบจะใช้ <strong>Central LINE Bot (@central_booking_oa)</strong> ยิงแจ้งเตือนใบนัดให้ฟรี 0-Friction
+                    หากเว้นว่างไว้ ระบบจะใช้ <strong>Central LINE Bot (@central_booking_oa)</strong> ยิงแจ้งเตือนใบนัดให้ฟรีอัตโนมัติ (ไม่ต้องตั้งค่าซับซ้อน)
                   </p>
                 </div>
 
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 text-xs text-slate-300 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-[11px]">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    สถานะปัจจุบัน: พร้อมใช้งานผ่าน Central LINE Bot (0-Friction)
+                    สถานะปัจจุบัน: พร้อมใช้งานทันทีผ่าน Central LINE Bot (ไม่ต้องตั้งค่าเพิ่มเติม)
                   </div>
                 </div>
 
