@@ -62,7 +62,6 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<string>('2026-08-05');
   const [selectedTime, setSelectedTime] = useState<string>('11:30');
 
-  // Customer Info
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [slipFile, setSlipFile] = useState<File | null>(null);
@@ -92,7 +91,7 @@ export default function BookingPage() {
   };
 
   const shopPhone = '081-234-5678';
-  const promptpayNumber = '081-234-5678';
+  const promptpayNumber = '0800742005';
   const lineOaUrl = 'https://line.me/R/ti/p/@goodcutsbarber';
   const bookingCode = 'BK-1042';
 
@@ -412,8 +411,12 @@ export default function BookingPage() {
                   </div>
                   
                   <div className="pt-2">
-                    <div className="w-36 h-36 bg-white rounded-xl p-2 mx-auto mb-2 flex items-center justify-center border border-slate-300 shadow-md">
-                      <QrCode className="w-32 h-32 text-slate-900" />
+                    <div className="w-44 h-44 bg-white rounded-2xl p-2 mx-auto mb-2 flex items-center justify-center border border-slate-300 shadow-xl">
+                      <img 
+                        src={`https://promptpay.io/${promptpayNumber.replace(/[^0-9]/g, '')}/${selectedService?.deposit || 100}.png`} 
+                        alt="PromptPay QR Code"
+                        className="w-40 h-40 object-contain rounded-xl"
+                      />
                     </div>
                     <button
                       type="button"
@@ -428,7 +431,7 @@ export default function BookingPage() {
                   <div>
                     <p className="text-xs text-slate-400">ยอดเงินมัดจำล็อกคิว</p>
                     <p className="text-2xl font-extrabold text-emerald-400 font-mono my-0.5">฿{selectedService?.deposit}.00</p>
-                    <p className="text-[11px] text-slate-400">ชื่อบัญชี: <span className="text-white font-medium">บจก. กู้ด คัทส์ (Good Cuts Co., Ltd.)</span></p>
+                    <p className="text-[11px] text-slate-400">ชื่อบัญชี: <span className="text-white font-medium">คุณฟรี (Good Cuts Barber)</span></p>
                     
                     <div className="flex items-center justify-center gap-2 mt-1">
                       <span className="text-xs text-slate-400">เลขพร้อมเพย์: <span className="font-mono text-white font-bold">{promptpayNumber}</span></span>

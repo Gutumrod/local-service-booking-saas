@@ -165,8 +165,8 @@ export default function AdminDashboard() {
   // Shop Settings State
   const [allowStaffSelection, setAllowStaffSelection] = useState<boolean>(true);
   const [shopWeeklyOffDays, setShopWeeklyOffDays] = useState<number[]>([1]);
-  const [promptpayNumber, setPromptpayNumber] = useState('081-234-5678');
-  const [promptpayName, setPromptpayName] = useState('บจก. กู้ด คัทส์ (Good Cuts Co., Ltd.)');
+  const [promptpayNumber, setPromptpayNumber] = useState('0800742005');
+  const [promptpayName, setPromptpayName] = useState('คุณฟรี (Good Cuts Barber)');
   const [lineOaId, setLineOaId] = useState('@goodcutsbarber');
   const [lineChannelToken, setLineChannelToken] = useState('');
 
