@@ -1214,8 +1214,8 @@ export default function AdminDashboard() {
                     onChange={(e) => setLineChannelToken(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-[#06C755]"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    หากเว้นว่างไว้ ระบบจะใช้ <strong>LINE กลางของระบบ (@central_booking_oa)</strong> ส่งแจ้งเตือนใบนัดให้อัตโนมัติ (ไม่ต้องตั้งค่าซับซ้อน)
+                  <p className="text-xs text-rose-400 font-medium mt-1.5 bg-rose-500/10 border border-rose-500/30 p-2.5 rounded-xl leading-relaxed">
+                    ⚠️ หากเว้นว่างไว้ ระบบจะใช้ <strong className="text-rose-300 font-bold underline">LINE กลางของระบบ (@central_booking_oa)</strong> ส่งแจ้งเตือนใบนัดให้อัตโนมัติ (ไม่ต้องตั้งค่าซับซ้อน)
                   </p>
                 </div>
 
