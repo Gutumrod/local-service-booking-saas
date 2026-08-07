@@ -156,6 +156,11 @@ export default function AdminDashboard() {
         setShopSlug(data.shop.slug);
         setShopId(data.shop.id);
         setShopRole(data.shop.role);
+        setShopPhone(data.shop.phone);
+        setShopAddress(data.shop.address);
+        setPromptpayNumber(data.shop.promptpayNumber);
+        setPromptpayName(data.shop.promptpayName);
+        setLineOaId(data.shop.lineOaId);
         setServices(data.services);
         setStaffList(data.staff);
         setSchedules(data.schedules);

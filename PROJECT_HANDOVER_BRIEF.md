@@ -2,7 +2,8 @@
 
 > **โปรเจกต์:** Local Service Booking & LINE Automation SaaS  
 > **ผู้พัฒนาหลัก:** คุณฟรี (CEO) & Antigravity AI Pair Programmer  
-> **สถานะปัจจุบัน:** **Phase A-D เสร็จสมบูรณ์ + Phase E1-E3.2 (Owner Auth, Real Bookings Dashboard, Services/Staff, Schedules/Holidays) เสร็จสมบูรณ์ ผ่านการ verify จริงผ่าน REST API + browser และ apply บน live DB แล้วทุกจุด (commit ล่าสุด `8bd6a45`, pushed 2026-08-08)** — เหลือ **E3.3 (Shop Settings + ปิดช่องโหว่ `shops` table เปิด column ภายในให้ anon อ่านได้)** กำลังทำอยู่ — ดูรายละเอียดที่ [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md) และแผนต่อ [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)  
+> **สถานะปัจจุบัน:** **Phase A-D เสร็จสมบูรณ์ + Phase E1-E3.3 ทั้งหมดเสร็จสมบูรณ์ ผ่านการ verify จริงผ่าน REST API + browser และ apply บน live DB แล้วทุกจุด** — เหลือแค่ **Phase E4 (Stripe Billing)** ที่ยังไม่เริ่ม — ดูรายละเอียดที่ [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md), [`docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md`](docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md) และแผนต่อ [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)  
+> **หมายเหตุ E3.3:** ทำเองคนเดียวโดยไม่มี Codex รีวิว (ผู้ใช้อนุมัติล่วงหน้าคืน 2026-08-08 — ดู vault handoff) เจอบั๊กจริง 2 จุดระหว่าง live verification ของตัวเอง (view `security_invoker` ทำให้ anon อ่านไม่ได้, และ dashboard initial load ไม่โหลด phone/PromptPay/LINE field) แก้และ verify ซ้ำก่อนปิด checkpoint ทั้งคู่
 > **Supabase Live Project:** `https://gyleqrjdzwwlqierdwcy.supabase.co` (`local_service` schema)  
 > **GitHub Repository:** [`https://github.com/Gutumrod/local-service-booking-saas`](https://github.com/Gutumrod/local-service-booking-saas)
 
@@ -59,8 +60,8 @@ D:\AI-Workspace\projects\local-service-booking-saas
    - **E3.1 — Services & Staff:** เพิ่ม `has_shop_role()`/`is_shop_owner()`, RPC จัดการบริการ (owner/admin) และพนักงาน (owner เท่านั้น) ตรงตาม role matrix ใน V1 ข้อ 7, soft-disable ผ่าน `is_active` (services มี booking FK แบบ `ON DELETE RESTRICT` ลบจริงไม่ได้)
    - **E3.2 — Schedules & Holidays:** RPC บันทึกตารางพนักงาน 7 วันแบบ atomic (ตรวจวันซ้ำ/เวลา/break) + RPC จัดการวันหยุดร้าน (idempotency-keyed) — owner/admin แก้ได้, staff อ่านอย่างเดียว (ยังไม่มี column เชื่อม `auth user` กับ `staff.id` จึงพิสูจน์ "ตัวเอง" ของ staff ไม่ได้ — deferred)
    - **ทุก checkpoint ปิดช่องโหว่เดียวกัน:** table เดิมมี `GRANT ALL`/policy `FOR ALL USING (is_shop_member(...))` ที่ไม่แยก role เลย แปลว่า **staff ธรรมดาเขียนตรงเข้าตารางได้มาตลอด** ก่อนหน้านี้ — ทุก RPC ใหม่ revoke direct write จาก `authenticated` แล้วบังคับผ่าน RPC ที่เช็ค role จริง
-   - **เหลือ E3.3 (Shop Settings):** กำลังทำ — พบช่องโหว่เพิ่ม: `shops` table เปิดให้ anon `select *` ได้ทุกคอลัมน์รวม `subscription_status`, `trial_ends_at`, `owner_name` (ยืนยันจริงผ่าน REST แล้ว) ต้องปิดพร้อมกับตัด LINE Channel Token ออกจาก client
-   - **E4 (Billing/Stripe) ยังไม่เริ่ม** — services/staff/schedules ทำก่อนตามลำดับความเสี่ยง
+   - **E3.3 — Shop Settings:** เสร็จแล้ว — พบและปิดช่องโหว่: `shops` table เปิดให้ anon `select *` ได้ทุกคอลัมน์รวม `subscription_status`, `trial_ends_at`, `owner_name` (ยืนยันจริงผ่าน REST) แก้ด้วย view `shop_public_profile` (คอลัมน์จำกัดเฉพาะที่หน้าจองใช้จริง) + RPC `update_shop_settings` (owner เท่านั้น ตาม V1 ข้อ 7) ตัด Custom LINE Channel Token input ออกจาก client ทั้งหมด (ไม่เคยเชื่อม backend เลย ถอดก่อนจะกลายเป็น client secret risk)
+   - **E4 (Billing/Stripe) ยังไม่เริ่ม** — เป็นงานสุดท้ายที่เหลือใน Phase E
 
 ---
 
@@ -69,14 +70,14 @@ D:\AI-Workspace\projects\local-service-booking-saas
 - 📄 **Master Spec & Rules:** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
 - 🛠️ **แผนงาน Phase A-E:** [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)
 
-## 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`) — เชื่อม backend จริงแล้ว 4/6 แท็บ
+## 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`) — เชื่อม backend จริงแล้ว 5/6 แท็บ
 
-- สถานะ 6 แท็บ (อัปเดต 2026-08-08 หลัง E3.2):
+- สถานะ 6 แท็บ (อัปเดต 2026-08-08 หลัง E3.3):
   1. `bookings` ✅ **จริง (E2):** โหลดคิวจริงตาม shop ของผู้ login, approve/reject/cancel ผ่าน RPC, loading/error/empty state, ป้องกันกดซ้ำระหว่าง mutation
   2. `staff` ✅ **จริง (E3.1):** เพิ่ม/เปิด-ปิดพนักงานผ่าน RPC (owner เท่านั้น), soft-disable ไม่ลบจริง
   3. `services` ✅ **จริง (E3.1):** เพิ่ม/แก้/ปิดบริการผ่าน RPC (owner/admin), soft-disable ผ่าน `is_active`
   4. `schedules` ✅ **จริง (E3.2):** ตารางพนักงาน 7 วัน + วันหยุดร้าน โหลด/บันทึกจริงผ่าน RPC แบบ atomic (owner/admin), ตัด state "เวลาเปิดร้านรวม" ที่ไม่มี backend column ออกแล้ว
-  5. `settings` ⬜ **ยัง mock — กำลังทำ E3.3:** ตั้งค่า PromptPay/LINE OA ID ยังไม่เชื่อม RPC, มีช่อง Custom LINE Channel Token ที่ต้องถอดออกก่อน (client secret risk)
+  5. `settings` ✅ **จริง (E3.3):** ชื่อร้าน/เบอร์/ที่อยู่/PromptPay/LINE OA ID บันทึกผ่าน RPC `update_shop_settings` (owner เท่านั้น) — ตัด Channel Token input และปุ่มทดสอบส่ง LINE (mock) ออกหมดแล้ว
   6. `billing` ⬜ **ยัง mock — รอ E4:** ดูโควตาคิวจอง ประวัติแพ็กเกจ และปุ่มอัปเกรดผูกลิงก์ไปหน้า `/register` (ยังไม่เชื่อม Stripe)
 
 ### 🟢 3.3 หน้าสมัครสมาชิกร้านค้าใหม่ (`apps/booking-admin/src/app/register/page.tsx`)
@@ -115,8 +116,8 @@ Phase A-D เสร็จแล้ว, Phase E แตกเป็น checkpoint 
 - ✅ **Phase E2:** Bookings tab เชื่อมจริง + approve/reject/cancel RPC — commit `38058a6`
 - ✅ **Phase E3.1:** Services & Staff management RPC + role authorization — commit `bd761fe`
 - ✅ **Phase E3.2:** Schedules & Holidays RPC + role authorization — commit `8bd6a45`
-- 🔶 **Phase E3.3 (กำลังทำ):** Shop Settings จริง + ตัด LINE Channel Token ออกจาก client + ปิดช่องโหว่ `shops` table เปิด column ภายในให้ anon อ่านได้
-- ⬜ **Phase E4:** เชื่อม Stripe Billing/Checkout/Portal จริง (ยังไม่เริ่ม)
+- ✅ **Phase E3.3:** Shop Settings จริง + ตัด LINE Channel Token ออกจาก client + ปิดช่องโหว่ `shops` table เปิด column ภายในให้ anon อ่านได้ — ดู [`PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md`](docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md)
+- ⬜ **Phase E4:** เชื่อม Stripe Billing/Checkout/Portal จริง (ยังไม่เริ่ม — งานสุดท้ายของ Phase E)
 
 เมื่อเปิดแชทใหม่ ให้บอก AI Agent ในแชทใหม่ดังนี้:
 
@@ -125,9 +126,8 @@ Phase A-D เสร็จแล้ว, Phase E แตกเป็น checkpoint 
 โปรดอ่านไฟล์ PRODUCT_RULES_V1.md, PROJECT_HANDOVER_BRIEF.md,
 docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md ในคลังไฟล์
 
-Phase A-D และ E1-E3.2 เสร็จแล้ว ต่อ Phase E3.3 (Shop Settings จริง + ตัด LINE
-Channel Token ออกจาก client + ปิดช่องโหว่ shops table เปิด column ภายในให้ anon
-อ่านได้) ตามบรีฟ Phase A-E"
+Phase A-D และ E1-E3.3 เสร็จแล้ว ต่อ Phase E4 (เชื่อม Stripe Billing/Checkout/
+Portal จริง — dashboard billing tab ยังเป็น mock ทั้งหมด) ตามบรีฟ Phase A-E"
 ```
 
 ## 6. ⚠️ ขั้นตอน Manual ที่ทำอัตโนมัติไม่ได้ (ต้องทำเองทุกครั้งที่ deploy โปรเจกต์ใหม่)

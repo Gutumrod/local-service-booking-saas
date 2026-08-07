@@ -10,13 +10,14 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 ---
 
-## 🟢 Status: Phase A-D Complete + Phase E1-E3.2 Complete (2026-08-08)
+## 🟢 Status: Phase A-D Complete + Phase E1-E3.3 Complete, only E4 (Billing) left (2026-08-08)
 
 - ✅ **Supabase PostgreSQL Database Engine (`local_service` schema):** All migrations under `supabase/migrations/` applied and verified against the live project `gyleqrjdzwwlqierdwcy`. Atomic slot lock RPC `create_booking_hold` with 15-minute countdown, non-confusing booking code generator (`BK-XXXXXX`), 2-axis status audit triggers, and a real Postgres exclusion constraint (`prevent_overlapping_staff_bookings`) verified under concurrent load — see [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md).
 - ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):** Uses a server-only `SUPABASE_SERVICE_ROLE_KEY` admin client (Phase B) instead of the anon key RLS used to block silently. HMAC-SHA256 signature verification with `crypto.timingSafeEqual`, parses `ผูกคิว {booking_code}-{link_token}` commands, binds `line_users`, replies with LINE Flex Cards, and reports real per-event failures instead of a blanket `success:true`.
 - ✅ **Single Shared Environment Configuration (`.env.local`):** Master configuration at workspace root (`.env.local`) hardlinked to both `apps/booking-consumer` and `apps/booking-admin`.
 - ✅ **Consumer booking flow (`/book/[slug]`):** Connected to live Supabase backend and manually verified end-to-end (hold → deposit slip upload to Storage → status transitions), with fail-closed staff scheduling and a proper no-deposit success path (Phase C).
-- ✅ **Shop owner dashboard (`/dashboard`) — real Supabase Auth login + 4 of 6 tabs wired to live data.** Owners/admins/staff sign in via Supabase Auth (`/login`), `/register` provisions a real shop + owner membership atomically. Bookings, Services, Staff, and Schedules/Holidays tabs load and mutate real tenant-scoped data through role-checked RPCs (owner/admin/staff enforced per `PRODUCT_RULES_V1.md` §7). Settings and Billing tabs remain mock, tracked as Phase E3.3/E4 in [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md).
+- ✅ **Shop owner dashboard (`/dashboard`) — real Supabase Auth login + 5 of 6 tabs wired to live data.** Owners/admins/staff sign in via Supabase Auth (`/login`), `/register` provisions a real shop + owner membership atomically. Bookings, Services, Staff, Schedules/Holidays, and Settings tabs all load and mutate real tenant-scoped data through role-checked RPCs (owner/admin/staff enforced per `PRODUCT_RULES_V1.md` §7). Billing remains mock, tracked as Phase E4 in [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md).
+- ✅ **`shops` table column-exposure fix (Phase E3.3):** the table previously let any unauthenticated caller `select=*` and read `subscription_status`, `trial_ends_at`, `owner_name`, and other internal columns for any shop whose public slug they knew. Fixed with a column-limited `shop_public_profile` view for anon reads and an owner-only `update_shop_settings` RPC for writes — see [`docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md`](docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md).
 
 ---
 
