@@ -1,29 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import {
+  approveBookingDeposit,
+  cancelBooking,
+  fetchAdminDashboardData,
+  rejectBookingDeposit,
+  type DashboardBooking,
+} from '@/lib/admin-service';
 import { 
-  Calendar, Users, DollarSign, CheckCircle2, XCircle, Eye, Clock, 
+  Calendar, Users, DollarSign, Eye, Clock,
   Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
-  QrCode, UserPlus, FileText, ExternalLink, CalendarOff, Coffee, Save,
-  Filter, Copy, MessageCircle, Send, Check, AlertTriangle, Trash2, Edit3, Lock,
-  Zap, HelpCircle, PackagePlus, Scissors, Store, Globe, Phone, X
+  QrCode, ExternalLink, CalendarOff, Coffee, Save,
+  Copy, MessageCircle, Send, Check, Trash2, Edit3, Lock,
+  PackagePlus, Scissors, Store, Globe, Phone, X
 } from 'lucide-react';
 
-interface Booking {
-  id: string;
-  customerName: string;
-  phone: string;
-  serviceName: string;
-  staffName: string;
-  date: string;
-  time: string;
-  totalPrice: number;
-  depositPrice: number;
-  status: 'hold' | 'pending_review' | 'confirmed' | 'completed' | 'cancelled' | 'no_show' | 'expired';
-  depositStatus: 'not_required' | 'awaiting' | 'submitted' | 'verified' | 'rejected' | 'refunded';
-  slipUrl?: string;
-}
+type Booking = DashboardBooking;
 
 interface StaffSchedule {
   staffId: string;
@@ -59,63 +53,6 @@ const INITIAL_SERVICES: ServiceItem[] = [
   { id: 'sv4', name: 'สปาหนังศีรษะแบบล้ำลึก (Deep Scalp Treatment)', description: 'ดีท็อกซ์หนังศีรษะ ขจัดความมันและรังแค พร้อมนวดผ่อนคลายความเครียด', duration: 60, price: 790, deposit: 200 }
 ];
 
-const INITIAL_BOOKINGS: Booking[] = [
-  {
-    id: 'BK-7K2M9Q',
-    customerName: 'คุณสมชาย ใจดี',
-    phone: '081-234-5678',
-    serviceName: 'ตัดผมชายพรีเมียม + สระเซ็ต',
-    staffName: 'ช่างเอก',
-    date: '2026-08-05',
-    time: '11:30',
-    totalPrice: 350,
-    depositPrice: 100,
-    status: 'pending_review',
-    depositStatus: 'submitted',
-    slipUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400'
-  },
-  {
-    id: 'BK-8P3R1W',
-    customerName: 'คุณเกริกฤทธิ์ มีสุข',
-    phone: '082-333-4455',
-    serviceName: 'สปาหนังศีรษะแบบล้ำลึก',
-    staffName: 'ช่างเอก',
-    date: '2026-08-07',
-    time: '14:00',
-    totalPrice: 790,
-    depositPrice: 200,
-    status: 'confirmed',
-    depositStatus: 'verified'
-  },
-  {
-    id: 'BK-9M4L2X',
-    customerName: 'คุณณัฐชนนท์ วงศ์สว่าง',
-    phone: '085-777-8899',
-    serviceName: 'ดัดวอลลุ่มสไตล์เกาหลี',
-    staffName: 'ช่างตั้ม',
-    date: '2026-08-10',
-    time: '10:30',
-    totalPrice: 1200,
-    depositPrice: 300,
-    status: 'pending_review',
-    depositStatus: 'submitted',
-    slipUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400'
-  },
-  {
-    id: 'BK-5A6B7C',
-    customerName: 'คุณวิชัย สุขสันต์',
-    phone: '089-987-6543',
-    serviceName: 'ดัดวอลลุ่มสไตล์เกาหลี',
-    staffName: 'ช่างตั้ม',
-    date: '2026-08-05',
-    time: '13:00',
-    totalPrice: 1200,
-    depositPrice: 300,
-    status: 'confirmed',
-    depositStatus: 'verified'
-  }
-];
-
 const INITIAL_STAFF: StaffMember[] = [
   { id: 'st1', name: 'ช่างเอก (Master Stylist)', phone: '081-111-2222', role: 'ช่างผมอาศด', isActive: true },
   { id: 'st2', name: 'ช่างตั้ม (Fade Specialist)', phone: '082-222-3333', role: 'ช่างวินเทจเฟด', isActive: true },
@@ -129,21 +66,38 @@ const INITIAL_SCHEDULES: StaffSchedule[] = [
 ];
 
 const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+const BOOKING_SITE_URL = (process.env.NEXT_PUBLIC_BOOKING_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+
+function getBangkokDateString() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'bookings' | 'schedules' | 'services' | 'staff' | 'settings' | 'billing'>('bookings');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>(INITIAL_STAFF);
   const [schedules, setSchedules] = useState<StaffSchedule[]>(INITIAL_SCHEDULES);
   const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
   const [selectedSlipBooking, setSelectedSlipBooking] = useState<Booking | null>(null);
+  const [cancelBookingTarget, setCancelBookingTarget] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isBookingsLoading, setIsBookingsLoading] = useState(true);
+  const [bookingError, setBookingError] = useState('');
+  const [mutatingBookingId, setMutatingBookingId] = useState<string | null>(null);
 
   // Shop Profile State
-  const [shopName, setShopName] = useState('Good Cuts Barber');
+  const [shopName, setShopName] = useState('กำลังโหลดข้อมูลร้าน...');
   const [shopSlogan, setShopSlogan] = useState('ร้านตัดผมชายพรีเมียม & สปาหนังศีรษะ');
   const [shopPhone, setShopPhone] = useState('081-234-5678');
-  const [shopSlug, setShopSlug] = useState('good-cuts-barber');
+  const [shopSlug, setShopSlug] = useState('');
   const [shopProfileSaved, setShopProfileSaved] = useState(false);
   const [copiedLinkNotice, setCopiedLinkNotice] = useState(false);
 
@@ -185,7 +139,7 @@ export default function AdminDashboard() {
   const [newStaffPhone, setNewStaffPhone] = useState('');
 
   // Stats
-  const todayStr = '2026-08-05';
+  const todayStr = getBangkokDateString();
   const totalToday = bookings.filter(b => b.date === todayStr).length;
   const totalUpcoming = bookings.filter(b => b.date > todayStr).length;
   const pendingDeposit = bookings.filter(b => b.status === 'pending_review').length;
@@ -197,18 +151,88 @@ export default function AdminDashboard() {
     return true;
   });
 
-  const handleApproveSlip = (bookingId: string) => {
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'confirmed' } : b));
-    setSelectedSlipBooking(null);
+  const loadDashboardBookings = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsBookingsLoading(true);
+    setBookingError('');
+
+    try {
+      const data = await fetchAdminDashboardData();
+      setBookings(data.bookings);
+      setShopName(data.shop.name);
+      setShopSlug(data.shop.slug);
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'โหลดข้อมูลคิวไม่สำเร็จ');
+    } finally {
+      if (showLoading) setIsBookingsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    fetchAdminDashboardData()
+      .then((data) => {
+        if (!isCurrent) return;
+        setBookings(data.bookings);
+        setShopName(data.shop.name);
+        setShopSlug(data.shop.slug);
+      })
+      .catch((error: unknown) => {
+        if (!isCurrent) return;
+        setBookingError(error instanceof Error ? error.message : 'โหลดข้อมูลคิวไม่สำเร็จ');
+      })
+      .finally(() => {
+        if (isCurrent) setIsBookingsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  const handleApproveSlip = async (bookingId: string) => {
+    setMutatingBookingId(bookingId);
+    setBookingError('');
+    try {
+      await approveBookingDeposit(bookingId);
+      setSelectedSlipBooking(null);
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'อนุมัติสลิปไม่สำเร็จ');
+    } finally {
+      setMutatingBookingId(null);
+    }
   };
 
-  const handleRejectSlip = (bookingId: string) => {
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
-    setSelectedSlipBooking(null);
+  const handleRejectSlip = async (bookingId: string) => {
+    setMutatingBookingId(bookingId);
+    setBookingError('');
+    try {
+      await rejectBookingDeposit(bookingId, 'สลิปไม่ถูกต้องหรือยอดเงินไม่ตรง');
+      setSelectedSlipBooking(null);
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'ปฏิเสธสลิปไม่สำเร็จ');
+    } finally {
+      setMutatingBookingId(null);
+    }
   };
 
-  const handleCancelBooking = (bookingId: string) => {
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
+  const handleConfirmCancellation = async () => {
+    if (!cancelBookingTarget || !cancelReason.trim()) return;
+
+    setMutatingBookingId(cancelBookingTarget.id);
+    setBookingError('');
+    try {
+      await cancelBooking(cancelBookingTarget.id, cancelReason.trim());
+      setCancelBookingTarget(null);
+      setCancelReason('');
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'ยกเลิกคิวไม่สำเร็จ');
+    } finally {
+      setMutatingBookingId(null);
+    }
   };
 
   const toggleShopOffDay = (dayIdx: number) => {
@@ -426,6 +450,15 @@ export default function AdminDashboard() {
         {/* TAB 1: BOOKINGS & SLIP APPROVAL WITH DATE FILTER */}
         {activeTab === 'bookings' && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            {bookingError && (
+              <div role="alert" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
+                <span>{bookingError}</span>
+                <button onClick={() => void loadDashboardBookings()} className="rounded-lg border border-rose-500/40 px-3 py-1 font-bold hover:bg-rose-500/10">
+                  ลองใหม่
+                </button>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-base font-bold text-white">ตารางจองคิวงาน & ตรวจสอบสลิป</h2>
@@ -456,8 +489,9 @@ export default function AdminDashboard() {
                 </div>
 
                 <a
-                  href={`/book/${shopSlug}`}
+                  href={shopSlug ? `${BOOKING_SITE_URL}/book/${shopSlug}` : '#'}
                   target="_blank"
+                  rel="noreferrer"
                   className="bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 px-3 py-2 rounded-xl flex items-center gap-1.5 border border-slate-700 font-medium"
                 >
                   หน้าจองลูกค้า
@@ -481,10 +515,22 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-sm">
+                  {isBookingsLoading && (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">กำลังโหลดข้อมูลคิวจริง...</td>
+                    </tr>
+                  )}
+
+                  {!isBookingsLoading && !bookingError && filteredBookings.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">ยังไม่มีคิวในช่วงที่เลือก</td>
+                    </tr>
+                  )}
+
                   {filteredBookings.map((b) => (
                     <tr key={b.id} className="hover:bg-slate-800/40 transition-all">
                       <td className="py-4 px-4">
-                        <p className="font-mono font-bold text-emerald-400 text-sm">{b.id}</p>
+                        <p className="font-mono font-bold text-emerald-400 text-sm">{b.bookingCode}</p>
                         <p className="font-bold text-white text-base">{b.customerName}</p>
                         <p className="text-xs text-slate-400">{b.phone}</p>
                       </td>
@@ -537,6 +583,7 @@ export default function AdminDashboard() {
                           {b.status === 'pending_review' && (
                             <button
                               onClick={() => setSelectedSlipBooking(b)}
+                              disabled={mutatingBookingId === b.id}
                               className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 shadow-md"
                             >
                               <Eye className="w-4 h-4" />
@@ -545,7 +592,11 @@ export default function AdminDashboard() {
                           )}
                           {b.status !== 'cancelled' && b.status !== 'completed' && b.status !== 'expired' && (
                             <button
-                              onClick={() => handleCancelBooking(b.id)}
+                              onClick={() => {
+                                setCancelBookingTarget(b);
+                                setCancelReason('');
+                              }}
+                              disabled={mutatingBookingId === b.id}
                               className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-all"
                               title="ยกเลิกคิวงานนี้"
                             >
@@ -820,7 +871,7 @@ export default function AdminDashboard() {
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-300 space-y-1">
               <div className="flex items-center gap-2 font-bold text-sm">
                 <Users className="w-4 h-4 text-emerald-400" />
-                หน้าที่ของส่วนจัดการ "พนักงาน"
+                หน้าที่ของส่วนจัดการ &quot;พนักงาน&quot;
               </div>
               <p className="text-slate-300">
                 หน้านี้ใช้สำหรับ **เพิ่ม/ลบรายชื่อพนักงานในร้าน** และ **เปิด/ปิดสถานะพร้อมปฏิบัติงาน** โดยระบบจะนำรายชื่อพนักงานไปแสดงให้ลูกค้าเลือกจองคิวบนมือถือ (หากเปิดโหมดให้เลือกพนักงาน)
@@ -1462,7 +1513,7 @@ export default function AdminDashboard() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-fade-in relative">
             {/* Top Right Close Button */}
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">ตรวจสอบสลิปมัดจำ (#{selectedSlipBooking.id})</h3>
+              <h3 className="text-base font-bold text-white">ตรวจสอบสลิปมัดจำ (#{selectedSlipBooking.bookingCode})</h3>
               <button
                 onClick={() => setSelectedSlipBooking(null)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all"
@@ -1473,7 +1524,11 @@ export default function AdminDashboard() {
             </div>
             
             <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 text-center relative">
-              <img src={selectedSlipBooking.slipUrl} alt="Deposit Slip" className="max-h-64 object-contain mx-auto rounded-lg" />
+              {selectedSlipBooking.slipUrl ? (
+                <img src={selectedSlipBooking.slipUrl} alt="Deposit Slip" className="max-h-64 object-contain mx-auto rounded-lg" />
+              ) : (
+                <p className="py-10 text-xs text-rose-300">ไม่พบ URL สลิปสำหรับคิวนี้</p>
+              )}
               <div className="mt-2 bg-emerald-500/10 border border-emerald-500/30 p-2 rounded text-[10px] text-emerald-400 font-medium">
                 🛡️ ยอดโอน ฿{selectedSlipBooking.depositPrice}.00 ตรงกับ PromptPay ร้าน
               </div>
@@ -1489,12 +1544,14 @@ export default function AdminDashboard() {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleRejectSlip(selectedSlipBooking.id)}
+                  disabled={mutatingBookingId === selectedSlipBooking.id}
                   className="w-1/2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold py-2.5 rounded-xl text-xs transition-all"
                 >
-                  สลิปปลอม/ไม่ตรง (ยกเลิก)
+                  ปฏิเสธสลิป (กลับไปรอโอน 15 นาที)
                 </button>
                 <button
                   onClick={() => handleApproveSlip(selectedSlipBooking.id)}
+                  disabled={mutatingBookingId === selectedSlipBooking.id}
                   className="w-1/2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs shadow-lg transition-all"
                 >
                   อนุมัติ & ยืนยันคิว
@@ -1507,6 +1564,47 @@ export default function AdminDashboard() {
                 className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold py-2 rounded-xl text-xs transition-all"
               >
                 ปิดหน้าต่าง (ยังไม่กดเลือก)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelBookingTarget && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-fade-in">
+            <div>
+              <h3 className="text-base font-bold text-white">ยกเลิกคิว #{cancelBookingTarget.bookingCode}</h3>
+              <p className="mt-1 text-xs text-slate-400">กรุณาระบุเหตุผล ร้านค้าต้องจัดการเรื่องคืนเงินมัดจำเองหากจำเป็น</p>
+            </div>
+
+            <textarea
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              placeholder="เช่น ร้านปิดฉุกเฉิน / ลูกค้าโทรขอยกเลิก"
+              rows={4}
+              className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-white outline-none focus:border-rose-500"
+            />
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelBookingTarget(null);
+                  setCancelReason('');
+                }}
+                disabled={mutatingBookingId === cancelBookingTarget.id}
+                className="w-1/2 rounded-xl border border-slate-700 bg-slate-800 py-2.5 text-xs font-semibold text-slate-300 disabled:opacity-50"
+              >
+                กลับ
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmCancellation()}
+                disabled={!cancelReason.trim() || mutatingBookingId === cancelBookingTarget.id}
+                className="w-1/2 rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {mutatingBookingId === cancelBookingTarget.id ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกคิว'}
               </button>
             </div>
           </div>
