@@ -5,9 +5,16 @@ import Link from 'next/link';
 import {
   approveBookingDeposit,
   cancelBooking,
+  createService,
+  createStaff,
   fetchAdminDashboardData,
   rejectBookingDeposit,
+  setServiceActive,
+  setStaffActive,
+  updateService,
   type DashboardBooking,
+  type DashboardService,
+  type DashboardStaff,
 } from '@/lib/admin-service';
 import { 
   Calendar, Users, DollarSign, Eye, Clock,
@@ -29,35 +36,8 @@ interface StaffSchedule {
   weeklyOffDays: number[];
 }
 
-interface StaffMember {
-  id: string;
-  name: string;
-  phone: string;
-  role: string;
-  isActive: boolean;
-}
-
-interface ServiceItem {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  deposit: number;
-}
-
-const INITIAL_SERVICES: ServiceItem[] = [
-  { id: 'sv1', name: 'ตัดผมชายพรีเมียม + สระเซ็ต (Signature Haircut)', description: 'บริการตัดแต่งทรงผมอย่างประณีต พร้อมสระนวดผ่อนคลายและจัดทรงด้วยผลิตภัณฑ์นำเข้า', duration: 45, price: 350, deposit: 100 },
-  { id: 'sv2', name: 'ดัดวอลลุ่มสไตล์เกาหลี (Korean Down Perm)', description: 'กดผมด้านข้าง ล็อกทรงวอลลุ่มธรรมชาติ ดูแลเส้นผมด้วยทรีตเมนต์บำรุง', duration: 90, price: 1200, deposit: 300 },
-  { id: 'sv3', name: 'ทำสีผมพรีเมียม (Premium Hair Color)', description: 'ทำสีผมแฟชั่น/ปกปิดผมขาว พร้อมทรีตเมนต์เคลือบเงาป้องกันผมเสีย', duration: 120, price: 1800, deposit: 500 },
-  { id: 'sv4', name: 'สปาหนังศีรษะแบบล้ำลึก (Deep Scalp Treatment)', description: 'ดีท็อกซ์หนังศีรษะ ขจัดความมันและรังแค พร้อมนวดผ่อนคลายความเครียด', duration: 60, price: 790, deposit: 200 }
-];
-
-const INITIAL_STAFF: StaffMember[] = [
-  { id: 'st1', name: 'ช่างเอก (Master Stylist)', phone: '081-111-2222', role: 'ช่างผมอาศด', isActive: true },
-  { id: 'st2', name: 'ช่างตั้ม (Fade Specialist)', phone: '082-222-3333', role: 'ช่างวินเทจเฟด', isActive: true },
-  { id: 'st3', name: 'ช่างบิว (Color Expert)', phone: '083-333-4444', role: 'ช่างเคมีทำสี', isActive: true }
-];
+type StaffMember = DashboardStaff;
+type ServiceItem = DashboardService;
 
 const INITIAL_SCHEDULES: StaffSchedule[] = [
   { staffId: 'st1', staffName: 'ช่างเอก', workStart: '10:00', workEnd: '19:00', breakStart: '12:00', breakEnd: '13:00', weeklyOffDays: [1] },
@@ -83,15 +63,19 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'bookings' | 'schedules' | 'services' | 'staff' | 'settings' | 'billing'>('bookings');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [staffList, setStaffList] = useState<StaffMember[]>(INITIAL_STAFF);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [schedules, setSchedules] = useState<StaffSchedule[]>(INITIAL_SCHEDULES);
-  const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [selectedSlipBooking, setSelectedSlipBooking] = useState<Booking | null>(null);
   const [cancelBookingTarget, setCancelBookingTarget] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isBookingsLoading, setIsBookingsLoading] = useState(true);
   const [bookingError, setBookingError] = useState('');
   const [mutatingBookingId, setMutatingBookingId] = useState<string | null>(null);
+  const [shopId, setShopId] = useState('');
+  const [shopRole, setShopRole] = useState<'owner' | 'admin' | 'staff'>('staff');
+  const [managementError, setManagementError] = useState('');
+  const [mutatingResourceId, setMutatingResourceId] = useState<string | null>(null);
 
   // Shop Profile State
   const [shopName, setShopName] = useState('กำลังโหลดข้อมูลร้าน...');
@@ -154,14 +138,21 @@ export default function AdminDashboard() {
   const loadDashboardBookings = useCallback(async (showLoading = true) => {
     if (showLoading) setIsBookingsLoading(true);
     setBookingError('');
+    setManagementError('');
 
     try {
       const data = await fetchAdminDashboardData();
       setBookings(data.bookings);
       setShopName(data.shop.name);
       setShopSlug(data.shop.slug);
+      setShopId(data.shop.id);
+      setShopRole(data.shop.role);
+      setServices(data.services);
+      setStaffList(data.staff);
     } catch (error) {
-      setBookingError(error instanceof Error ? error.message : 'โหลดข้อมูลคิวไม่สำเร็จ');
+      const message = error instanceof Error ? error.message : 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
+      setBookingError(message);
+      setManagementError(message);
     } finally {
       if (showLoading) setIsBookingsLoading(false);
     }
@@ -176,10 +167,16 @@ export default function AdminDashboard() {
         setBookings(data.bookings);
         setShopName(data.shop.name);
         setShopSlug(data.shop.slug);
+        setShopId(data.shop.id);
+        setShopRole(data.shop.role);
+        setServices(data.services);
+        setStaffList(data.staff);
       })
       .catch((error: unknown) => {
         if (!isCurrent) return;
-        setBookingError(error instanceof Error ? error.message : 'โหลดข้อมูลคิวไม่สำเร็จ');
+        const message = error instanceof Error ? error.message : 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
+        setBookingError(message);
+        setManagementError(message);
       })
       .finally(() => {
         if (isCurrent) setIsBookingsLoading(false);
@@ -254,23 +251,35 @@ export default function AdminDashboard() {
     setTimeout(() => setCopiedLinkNotice(false), 2000);
   };
 
-  const handleAddStaff = (e: React.FormEvent) => {
+  const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStaffName) return;
-    const newSt: StaffMember = {
-      id: `st${staffList.length + 1}`,
-      name: newStaffName,
-      phone: newStaffPhone || '08X-XXX-XXXX',
-      role: 'พนักงานให้บริการทั่วไป',
-      isActive: true
-    };
-    setStaffList(prev => [...prev, newSt]);
-    setNewStaffName('');
-    setNewStaffPhone('');
+    if (!shopId || !newStaffName.trim()) return;
+
+    setMutatingResourceId('staff-new');
+    setManagementError('');
+    try {
+      await createStaff(shopId, newStaffName.trim(), newStaffPhone.trim());
+      setNewStaffName('');
+      setNewStaffPhone('');
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'เพิ่มพนักงานไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
   };
 
-  const toggleStaffActive = (staffId: string) => {
-    setStaffList(prev => prev.map(st => st.id === staffId ? { ...st, isActive: !st.isActive } : st));
+  const toggleStaffActive = async (staffMember: StaffMember) => {
+    setMutatingResourceId(staffMember.id);
+    setManagementError('');
+    try {
+      await setStaffActive(staffMember.id, !staffMember.isActive);
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'เปลี่ยนสถานะพนักงานไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
   };
 
   const handleAddHoliday = (e: React.FormEvent) => {
@@ -301,36 +310,53 @@ export default function AdminDashboard() {
     setShowServiceForm(true);
   };
 
-  const handleSaveService = (e: React.FormEvent) => {
+  const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!serviceName) return;
+    if (!shopId || !serviceName.trim()) return;
 
-    if (editingService) {
-      setServices(prev => prev.map(s => s.id === editingService.id ? {
-        ...s,
-        name: serviceName,
-        description: serviceDesc,
-        duration: serviceDuration,
-        price: servicePrice,
-        deposit: serviceDeposit
-      } : s));
-    } else {
-      const newSv: ServiceItem = {
-        id: `sv${services.length + 1}`,
-        name: serviceName,
-        description: serviceDesc || 'บริการคุณภาพสูงจากทางร้าน',
-        duration: serviceDuration,
-        price: servicePrice,
-        deposit: serviceDeposit
-      };
-      setServices(prev => [...prev, newSv]);
+    if (serviceDeposit > servicePrice) {
+      setManagementError('ยอดมัดจำต้องไม่มากกว่าราคาบริการ');
+      return;
     }
 
-    setShowServiceForm(false);
+    const input = {
+      name: serviceName.trim(),
+      description: serviceDesc.trim(),
+      duration: serviceDuration,
+      price: servicePrice,
+      deposit: serviceDeposit,
+    };
+
+    setMutatingResourceId(editingService?.id ?? 'service-new');
+    setManagementError('');
+    try {
+      if (editingService) {
+        await updateService(editingService.id, input);
+      } else {
+        await createService(shopId, input);
+      }
+
+      setShowServiceForm(false);
+      setEditingService(null);
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'บันทึกบริการไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
   };
 
-  const handleDeleteService = (id: string) => {
-    setServices(prev => prev.filter(s => s.id !== id));
+  const handleToggleService = async (service: ServiceItem) => {
+    setMutatingResourceId(service.id);
+    setManagementError('');
+    try {
+      await setServiceActive(service.id, !service.isActive);
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'เปลี่ยนสถานะบริการไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
   };
 
   const triggerSaveNotice = () => {
@@ -868,16 +894,20 @@ export default function AdminDashboard() {
         {/* TAB 3: STAFF MANAGEMENT */}
         {activeTab === 'staff' && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            {managementError && (
+              <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">{managementError}</p>
+            )}
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-300 space-y-1">
               <div className="flex items-center gap-2 font-bold text-sm">
                 <Users className="w-4 h-4 text-emerald-400" />
                 หน้าที่ของส่วนจัดการ &quot;พนักงาน&quot;
               </div>
               <p className="text-slate-300">
-                หน้านี้ใช้สำหรับ **เพิ่ม/ลบรายชื่อพนักงานในร้าน** และ **เปิด/ปิดสถานะพร้อมปฏิบัติงาน** โดยระบบจะนำรายชื่อพนักงานไปแสดงให้ลูกค้าเลือกจองคิวบนมือถือ (หากเปิดโหมดให้เลือกพนักงาน)
+                หน้านี้ใช้สำหรับเพิ่มรายชื่อพนักงานและเปิด/ปิดสถานะพร้อมรับคิว โดยระบบจะนำเฉพาะพนักงานที่เปิดใช้งานไปแสดงในหน้าจองลูกค้า
               </p>
             </div>
 
+            {shopRole === 'owner' ? (
             <form onSubmit={handleAddStaff} className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-wrap gap-3 items-end">
               <div className="flex-1 min-w-[180px]">
                 <label className="text-xs text-slate-300 block mb-1">ชื่อพนักงาน *</label>
@@ -902,14 +932,19 @@ export default function AdminDashboard() {
               </div>
               <button
                 type="submit"
+                disabled={mutatingResourceId === 'staff-new'}
                 className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow-md"
               >
                 <Plus className="w-4 h-4" />
-                เพิ่มพนักงานใหม่
+                {mutatingResourceId === 'staff-new' ? 'กำลังเพิ่ม...' : 'เพิ่มพนักงานใหม่'}
               </button>
             </form>
+            ) : (
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">เฉพาะ owner เท่านั้นที่เพิ่มหรือเปลี่ยนสถานะพนักงานได้</p>
+            )}
 
             <div className="space-y-3">
+              {staffList.length === 0 && <p className="py-8 text-center text-xs text-slate-500">ยังไม่มีพนักงานในร้าน</p>}
               {staffList.map((st) => (
                 <div key={st.id} className="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs">
                   <div>
@@ -918,18 +953,13 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => toggleStaffActive(st.id)}
+                      onClick={() => void toggleStaffActive(st)}
+                      disabled={shopRole !== 'owner' || mutatingResourceId === st.id}
                       className={`px-3 py-1 rounded-lg font-semibold text-[11px] border ${
                         st.isActive ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-400'
                       }`}
                     >
-                      {st.isActive ? 'พร้อมรับคิว' : 'ปิดรับคิวชั่วคราว'}
-                    </button>
-                    <button 
-                      onClick={() => setStaffList(prev => prev.filter(s => s.id !== st.id))}
-                      className="text-slate-500 hover:text-rose-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                      {mutatingResourceId === st.id ? 'กำลังบันทึก...' : st.isActive ? 'พร้อมรับคิว' : 'ปิดรับคิวชั่วคราว'}
                     </button>
                   </div>
                 </div>
@@ -941,6 +971,9 @@ export default function AdminDashboard() {
         {/* TAB 4: SHOP PROFILE & SERVICES MANAGER */}
         {activeTab === 'services' && (
           <div className="space-y-6">
+            {managementError && (
+              <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">{managementError}</p>
+            )}
             {/* SECTION 1: SHOP PROFILE EDITING */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -1026,14 +1059,15 @@ export default function AdminDashboard() {
                     <Scissors className="w-5 h-5 text-emerald-400" />
                     รายการบริการ & ยอดมัดจำ PromptPay (Service Offerings)
                   </h2>
-                  <p className="text-xs text-slate-400">เพิ่ม ลบ หรือแก้ไขราคาบริการ ระยะเวลา และยอดเงินมัดจำที่จะนำไปแสดงในหน้าจองลูกค้า</p>
+                  <p className="text-xs text-slate-400">เพิ่ม แก้ไข หรือปิดบริการ พร้อมกำหนดราคา ระยะเวลา และยอดมัดจำที่แสดงในหน้าจองลูกค้า</p>
                 </div>
                 <button
                   onClick={handleOpenAddService}
+                  disabled={shopRole === 'staff'}
                   className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
                 >
                   <Plus className="w-4 h-4" />
-                  เพิ่มบริการใหม่
+                  {shopRole === 'staff' ? 'ไม่มีสิทธิ์แก้บริการ' : 'เพิ่มบริการใหม่'}
                 </button>
               </div>
 
@@ -1121,9 +1155,10 @@ export default function AdminDashboard() {
                     </button>
                     <button
                       type="submit"
+                      disabled={mutatingResourceId === (editingService?.id ?? 'service-new')}
                       className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md"
                     >
-                      {editingService ? 'บันทึกการแก้ไข' : 'บันทึกบริการใหม่'}
+                      {mutatingResourceId === (editingService?.id ?? 'service-new') ? 'กำลังบันทึก...' : editingService ? 'บันทึกการแก้ไข' : 'บันทึกบริการใหม่'}
                     </button>
                   </div>
                 </form>
@@ -1131,11 +1166,13 @@ export default function AdminDashboard() {
 
               {/* Service Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {services.length === 0 && <p className="py-8 text-center text-xs text-slate-500 md:col-span-2">ยังไม่มีบริการในร้าน</p>}
                 {services.map((sv) => (
-                  <div key={sv.id} className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl p-5 space-y-3 transition-all">
+                  <div key={sv.id} className={`bg-slate-950 border rounded-xl p-5 space-y-3 transition-all ${sv.isActive ? 'border-slate-800 hover:border-slate-700' : 'border-slate-800 opacity-60'}`}>
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-bold text-sm text-white">{sv.name}</h3>
+                        {!sv.isActive && <span className="mt-1 inline-block rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-400">ปิดบริการ</span>}
                         <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{sv.description}</p>
                       </div>
                       <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-mono">
@@ -1152,17 +1189,19 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEditService(sv)}
+                          disabled={shopRole === 'staff' || mutatingResourceId === sv.id}
                           className="text-slate-400 hover:text-emerald-400 p-1 rounded transition-all"
                           title="แก้ไขบริการ"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteService(sv.id)}
-                          className="text-slate-500 hover:text-rose-400 p-1 rounded transition-all"
-                          title="ลบบริการ"
+                          onClick={() => void handleToggleService(sv)}
+                          disabled={shopRole === 'staff' || mutatingResourceId === sv.id}
+                          className={`p-1 rounded transition-all ${sv.isActive ? 'text-slate-500 hover:text-rose-400' : 'text-slate-500 hover:text-emerald-400'}`}
+                          title={sv.isActive ? 'ปิดบริการ' : 'เปิดบริการอีกครั้ง'}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {sv.isActive ? <Trash2 className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>

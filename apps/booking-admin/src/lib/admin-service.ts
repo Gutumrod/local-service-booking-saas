@@ -37,11 +37,32 @@ export interface DashboardShop {
   id: string;
   name: string;
   slug: string;
+  role: 'owner' | 'admin' | 'staff';
+}
+
+export interface DashboardService {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  deposit: number;
+  isActive: boolean;
+}
+
+export interface DashboardStaff {
+  id: string;
+  name: string;
+  phone: string;
+  role: string;
+  isActive: boolean;
 }
 
 export interface AdminDashboardData {
   shop: DashboardShop;
   bookings: DashboardBooking[];
+  services: DashboardService[];
+  staff: DashboardStaff[];
 }
 
 interface RelationName {
@@ -71,6 +92,24 @@ interface RawBooking {
   staff: RelationStaff | RelationStaff[] | null;
 }
 
+interface RawService {
+  id: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price: number | string;
+  deposit_amount: number | string | null;
+  is_active: boolean;
+}
+
+interface RawStaff {
+  id: string;
+  name: string;
+  nickname: string | null;
+  phone: string | null;
+  is_active: boolean;
+}
+
 function firstRelation<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
@@ -88,7 +127,7 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
 
   const { data: membership, error: membershipError } = await supabase
     .from('shop_users')
-    .select('shop_id')
+    .select('shop_id, role')
     .eq('user_id', authData.user.id)
     .limit(1)
     .single();
@@ -97,7 +136,7 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     throw new Error(membershipError?.message || 'ไม่พบสิทธิ์ร้านค้าของบัญชีนี้');
   }
 
-  const [shopResult, bookingsResult] = await Promise.all([
+  const [shopResult, bookingsResult, servicesResult, staffResult] = await Promise.all([
     supabase
       .from('shops')
       .select('id, name, slug')
@@ -122,6 +161,18 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       .eq('shop_id', membership.shop_id)
       .order('booking_date', { ascending: false })
       .order('start_time', { ascending: false }),
+    supabase
+      .from('services')
+      .select('id, name, description, duration_minutes, price, deposit_amount, is_active')
+      .eq('shop_id', membership.shop_id)
+      .order('is_active', { ascending: false })
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('staff')
+      .select('id, name, nickname, phone, is_active')
+      .eq('shop_id', membership.shop_id)
+      .order('is_active', { ascending: false })
+      .order('created_at', { ascending: true }),
   ]);
 
   if (shopResult.error || !shopResult.data) {
@@ -130,6 +181,14 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
 
   if (bookingsResult.error) {
     throw new Error(bookingsResult.error.message);
+  }
+
+  if (servicesResult.error) {
+    throw new Error(servicesResult.error.message);
+  }
+
+  if (staffResult.error) {
+    throw new Error(staffResult.error.message);
   }
 
   const bookings = ((bookingsResult.data ?? []) as unknown as RawBooking[]).map((booking) => {
@@ -155,9 +214,92 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
   });
 
   return {
-    shop: shopResult.data as DashboardShop,
+    shop: {
+      ...shopResult.data,
+      role: membership.role as DashboardShop['role'],
+    },
     bookings,
+    services: ((servicesResult.data ?? []) as unknown as RawService[]).map((service) => ({
+      id: service.id,
+      name: service.name,
+      description: service.description ?? '',
+      duration: service.duration_minutes,
+      price: toAmount(service.price),
+      deposit: toAmount(service.deposit_amount),
+      isActive: service.is_active,
+    })),
+    staff: ((staffResult.data ?? []) as unknown as RawStaff[]).map((staffMember) => ({
+      id: staffMember.id,
+      name: staffMember.name,
+      phone: staffMember.phone ?? '-',
+      role: staffMember.nickname || 'พนักงานให้บริการ',
+      isActive: staffMember.is_active,
+    })),
   };
+}
+
+export interface ServiceInput {
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  deposit: number;
+}
+
+export async function createService(shopId: string, input: ServiceInput): Promise<void> {
+  const { error } = await supabase.rpc('create_service', {
+    p_shop_id: shopId,
+    p_name: input.name,
+    p_description: input.description,
+    p_duration_minutes: input.duration,
+    p_price: input.price,
+    p_deposit_amount: input.deposit,
+    p_idempotency_key: crypto.randomUUID(),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function updateService(serviceId: string, input: ServiceInput): Promise<void> {
+  const { error } = await supabase.rpc('update_service', {
+    p_service_id: serviceId,
+    p_name: input.name,
+    p_description: input.description,
+    p_duration_minutes: input.duration,
+    p_price: input.price,
+    p_deposit_amount: input.deposit,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function setServiceActive(serviceId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_service_active', {
+    p_service_id: serviceId,
+    p_is_active: isActive,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function createStaff(shopId: string, name: string, phone: string): Promise<void> {
+  const { error } = await supabase.rpc('create_staff', {
+    p_shop_id: shopId,
+    p_name: name,
+    p_phone: phone,
+    p_idempotency_key: crypto.randomUUID(),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function setStaffActive(staffId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_staff_active', {
+    p_staff_id: staffId,
+    p_is_active: isActive,
+  });
+
+  if (error) throw new Error(error.message);
 }
 
 export async function approveBookingDeposit(bookingId: string): Promise<void> {
