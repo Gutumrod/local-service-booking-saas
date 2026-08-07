@@ -5,16 +5,21 @@ import Link from 'next/link';
 import {
   approveBookingDeposit,
   cancelBooking,
+  createShopHoliday,
   createService,
   createStaff,
+  deleteShopHoliday,
   fetchAdminDashboardData,
   rejectBookingDeposit,
+  saveStaffWeeklySchedule,
   setServiceActive,
   setStaffActive,
   updateService,
   type DashboardBooking,
   type DashboardService,
   type DashboardStaff,
+  type DashboardStaffSchedule,
+  type DashboardHoliday,
 } from '@/lib/admin-service';
 import { 
   Calendar, Users, DollarSign, Eye, Clock,
@@ -26,24 +31,8 @@ import {
 
 type Booking = DashboardBooking;
 
-interface StaffSchedule {
-  staffId: string;
-  staffName: string;
-  workStart: string;
-  workEnd: string;
-  breakStart: string;
-  breakEnd: string;
-  weeklyOffDays: number[];
-}
-
 type StaffMember = DashboardStaff;
 type ServiceItem = DashboardService;
-
-const INITIAL_SCHEDULES: StaffSchedule[] = [
-  { staffId: 'st1', staffName: 'ช่างเอก', workStart: '10:00', workEnd: '19:00', breakStart: '12:00', breakEnd: '13:00', weeklyOffDays: [1] },
-  { staffId: 'st2', staffName: 'ช่างตั้ม', workStart: '10:00', workEnd: '19:00', breakStart: '13:00', breakEnd: '14:00', weeklyOffDays: [2] },
-  { staffId: 'st3', staffName: 'ช่างบิว', workStart: '11:00', workEnd: '20:00', breakStart: '14:00', breakEnd: '15:00', weeklyOffDays: [3] }
-];
 
 const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 const BOOKING_SITE_URL = (process.env.NEXT_PUBLIC_BOOKING_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -64,7 +53,8 @@ export default function AdminDashboard() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const [schedules, setSchedules] = useState<StaffSchedule[]>(INITIAL_SCHEDULES);
+  const [schedules, setSchedules] = useState<DashboardStaffSchedule[]>([]);
+  const [selectedScheduleDays, setSelectedScheduleDays] = useState<Record<string, number>>({});
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [selectedSlipBooking, setSelectedSlipBooking] = useState<Booking | null>(null);
   const [cancelBookingTarget, setCancelBookingTarget] = useState<Booking | null>(null);
@@ -85,10 +75,6 @@ export default function AdminDashboard() {
   const [shopProfileSaved, setShopProfileSaved] = useState(false);
   const [copiedLinkNotice, setCopiedLinkNotice] = useState(false);
 
-  // Shop Operating Hours State (General Opening / Closing Time)
-  const [shopOpenTime, setShopOpenTime] = useState('09:00');
-  const [shopCloseTime, setShopCloseTime] = useState('20:00');
-
   // Service Form State
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
   const [showServiceForm, setShowServiceForm] = useState(false);
@@ -103,7 +89,6 @@ export default function AdminDashboard() {
 
   // Shop Settings State
   const [allowStaffSelection, setAllowStaffSelection] = useState<boolean>(true);
-  const [shopWeeklyOffDays, setShopWeeklyOffDays] = useState<number[]>([1]);
   const [promptpayNumber, setPromptpayNumber] = useState('0800742005');
   const [promptpayName, setPromptpayName] = useState('คุณฟรี (Good Cuts Barber)');
   const [lineOaId, setLineOaId] = useState('@goodcutsbarber');
@@ -112,12 +97,9 @@ export default function AdminDashboard() {
   // Special Holidays
   const [specialHolidayDate, setSpecialHolidayDate] = useState('');
   const [specialHolidayReason, setSpecialHolidayReason] = useState('');
-  const [holidaysList, setHolidaysList] = useState<{ date: string; reason: string }[]>([
-    { date: '2026-08-12', reason: 'วันแม่แห่งชาติ (ร้านปิดทำการประจำปี)' }
-  ]);
+  const [holidaysList, setHolidaysList] = useState<DashboardHoliday[]>([]);
 
   // Modals & Notices
-  const [saveNotice, setSaveNotice] = useState(false);
   const [testLineNotice, setTestLineNotice] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffPhone, setNewStaffPhone] = useState('');
@@ -149,6 +131,8 @@ export default function AdminDashboard() {
       setShopRole(data.shop.role);
       setServices(data.services);
       setStaffList(data.staff);
+      setSchedules(data.schedules);
+      setHolidaysList(data.holidays);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
       setBookingError(message);
@@ -171,6 +155,8 @@ export default function AdminDashboard() {
         setShopRole(data.shop.role);
         setServices(data.services);
         setStaffList(data.staff);
+        setSchedules(data.schedules);
+        setHolidaysList(data.holidays);
       })
       .catch((error: unknown) => {
         if (!isCurrent) return;
@@ -232,12 +218,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const toggleShopOffDay = (dayIdx: number) => {
-    setShopWeeklyOffDays(prev => 
-      prev.includes(dayIdx) ? prev.filter(d => d !== dayIdx) : [...prev, dayIdx]
-    );
-  };
-
   const handleSaveShopProfile = (e: React.FormEvent) => {
     e.preventDefault();
     setShopProfileSaved(true);
@@ -282,12 +262,57 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddHoliday = (e: React.FormEvent) => {
+  const handleAddHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!specialHolidayDate) return;
-    setHolidaysList(prev => [...prev, { date: specialHolidayDate, reason: specialHolidayReason || 'วันหยุดพิเศษร้านค้า' }]);
-    setSpecialHolidayDate('');
-    setSpecialHolidayReason('');
+    if (!shopId || !specialHolidayDate) return;
+    setMutatingResourceId('holiday-new');
+    setManagementError('');
+    try {
+      await createShopHoliday(shopId, specialHolidayDate, specialHolidayReason.trim());
+      setSpecialHolidayDate('');
+      setSpecialHolidayReason('');
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'เพิ่มวันหยุดไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
+  };
+
+  const handleDeleteHoliday = async (holidayId: string) => {
+    setMutatingResourceId(holidayId);
+    setManagementError('');
+    try {
+      await deleteShopHoliday(holidayId);
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'ลบวันหยุดไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
+  };
+
+  const updateScheduleDay = (
+    staffId: string,
+    dayOfWeek: number,
+    changes: Partial<DashboardStaffSchedule['days'][number]>,
+  ) => {
+    setSchedules((previous) => previous.map((schedule) => schedule.staffId === staffId
+      ? { ...schedule, days: schedule.days.map((day) => day.dayOfWeek === dayOfWeek ? { ...day, ...changes } : day) }
+      : schedule));
+  };
+
+  const handleSaveSchedule = async (schedule: DashboardStaffSchedule) => {
+    setMutatingResourceId(schedule.staffId);
+    setManagementError('');
+    try {
+      await saveStaffWeeklySchedule(schedule.staffId, schedule.days);
+      await loadDashboardBookings(false);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'บันทึกตารางเวลาไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
   };
 
   const handleOpenAddService = () => {
@@ -357,11 +382,6 @@ export default function AdminDashboard() {
     } finally {
       setMutatingResourceId(null);
     }
-  };
-
-  const triggerSaveNotice = () => {
-    setSaveNotice(true);
-    setTimeout(() => setSaveNotice(false), 2000);
   };
 
   return (
@@ -647,115 +667,59 @@ export default function AdminDashboard() {
         {activeTab === 'schedules' && (
           <div className="space-y-6">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-emerald-400" />
-                    การตั้งค่าเวลาเปิด-ปิด & วันหยุดประจำสัปดาห์ของร้านค้า
-                  </h2>
-                  <p className="text-xs text-slate-400">กำหนดกรอบเวลาเปิดทำการและวันปิดทำการประจำสัปดาห์ของร้านค้าเพื่อใช้คำนวณคิวจองอัตโนมัติ</p>
-                </div>
-                <button
-                  onClick={triggerSaveNotice}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
-                >
-                  <Save className="w-4 h-4" />
-                  {saveNotice ? 'บันทึกแล้ว!' : 'บันทึกการตั้งค่าร้านค้า'}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
-                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 border-b border-slate-800/80 pb-2">
-                    <Clock className="w-4 h-4 text-emerald-400" /> เวลาเปิด - ปิดทำการทั่วไปของร้านค้า
-                  </span>
-                  
-                  <div className="grid grid-cols-2 gap-3 text-xs pt-1">
-                    <div>
-                      <label className="text-[11px] text-slate-300 block mb-1 font-semibold">เวลาเปิดร้าน *</label>
-                      <input
-                        type="time"
-                        value={shopOpenTime}
-                        onChange={(e) => setShopOpenTime(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-slate-300 block mb-1 font-semibold">เวลาปิดร้าน *</label>
-                      <input
-                        type="time"
-                        value={shopCloseTime}
-                        onChange={(e) => setShopCloseTime(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-500">สล็อตเวลารับจองคิวจะถูกจำกัดอยู่ในช่วงเวลานี้เสมอ</p>
-                </div>
-
-                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                  <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5 border-b border-slate-800/80 pb-2">
-                    <CalendarOff className="w-4 h-4 text-rose-400" /> วันหยุดประจำสัปดาห์ของร้านค้า (Shop-wide Off)
-                  </span>
-
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {DAY_NAMES.map((dayName, idx) => {
-                      const isShopOff = shopWeeklyOffDays.includes(idx);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => toggleShopOffDay(idx)}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                            isShopOff
-                              ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-bold'
-                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {dayName} {isShopOff ? '(ปิด)' : ''}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[10px] text-slate-500">วันทำการที่ถูกเลือกปิด จะไม่เปิดให้ลูกค้าจองคิวในทุกกรณี</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Clock className="w-5 h-5 text-emerald-400" />
                 เวลาทำงาน & เวลาพักเที่ยงของพนักงานรายบุคคล
               </h2>
 
+              {managementError && (
+                <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">{managementError}</p>
+              )}
+              {shopRole === 'staff' && (
+                <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  บัญชีพนักงานดูตารางได้เท่านั้น การแก้ตารางของตัวเองจะเปิดใช้หลังระบบเชื่อมบัญชีกับข้อมูลพนักงานแล้ว
+                </p>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {schedules.map((sch) => (
-                  <div key={sch.staffId} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs space-y-3 flex flex-col justify-between shadow-md hover:border-slate-700 transition-all">
+                {schedules.map((sch) => {
+                  const selectedDayNumber = selectedScheduleDays[sch.staffId] ?? 0;
+                  const selectedDay = sch.days.find((day) => day.dayOfWeek === selectedDayNumber) ?? sch.days[0];
+                  if (!selectedDay) return null;
+                  const canManageSchedules = shopRole === 'owner' || shopRole === 'admin';
+                  return (
+                  <div key={sch.staffId} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs space-y-3 shadow-md hover:border-slate-700 transition-all">
                     <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
                       <span className="font-bold text-sm text-emerald-400">{sch.staffName}</span>
+                      <span className="text-[10px] text-slate-500">{sch.days.filter((day) => day.isWorkingDay).length} วันทำงาน</span>
                     </div>
-
+                    <div className="flex flex-wrap gap-1">
+                      {DAY_NAMES.map((dayName, dayOfWeek) => {
+                        const day = sch.days.find((item) => item.dayOfWeek === dayOfWeek);
+                        return (
+                          <button key={dayName} type="button" onClick={() => setSelectedScheduleDays((previous) => ({ ...previous, [sch.staffId]: dayOfWeek }))}
+                            className={`rounded-md border px-1.5 py-1 text-[10px] ${selectedDayNumber === dayOfWeek ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300' : day?.isWorkingDay ? 'border-slate-700 text-slate-300' : 'border-rose-500/30 text-rose-300'}`}>
+                            {dayName.slice(0, 2)}
+                          </button>
+                        );
+                      })}
+                    </div>
                     <div className="space-y-3">
+                      <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 p-2 text-slate-300">
+                        <span>{DAY_NAMES[selectedDay.dayOfWeek]}เป็นวันทำงาน</span>
+                        <input type="checkbox" checked={selectedDay.isWorkingDay} disabled={!canManageSchedules}
+                          onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { isWorkingDay: event.target.checked })} />
+                      </label>
                       <div>
                         <label className="text-[11px] font-semibold text-slate-300 block mb-1">เวลาเข้างาน - เลิกงาน</label>
                         <div className="flex items-center gap-1.5">
-                          <input
-                            type="time"
-                            value={sch.workStart}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setSchedules(prev => prev.map(s => s.staffId === sch.staffId ? { ...s, workStart: val } : s));
-                            }}
+                          <input type="time" value={selectedDay.workStart} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
+                            onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { workStart: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-emerald-500 font-bold"
                           />
                           <span className="text-slate-500 text-[10px]">ถึง</span>
-                          <input
-                            type="time"
-                            value={sch.workEnd}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setSchedules(prev => prev.map(s => s.staffId === sch.staffId ? { ...s, workEnd: val } : s));
-                            }}
+                          <input type="time" value={selectedDay.workEnd} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
+                            onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { workEnd: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-emerald-500 font-bold"
                           />
                         </div>
@@ -766,30 +730,27 @@ export default function AdminDashboard() {
                           <Coffee className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> พักเที่ยง/ระหว่างวัน
                         </label>
                         <div className="flex items-center gap-1.5">
-                          <input
-                            type="time"
-                            value={sch.breakStart}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setSchedules(prev => prev.map(s => s.staffId === sch.staffId ? { ...s, breakStart: val } : s));
-                            }}
+                          <input type="time" value={selectedDay.breakStart} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
+                            onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { breakStart: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-amber-500 font-bold"
                           />
                           <span className="text-slate-500 text-[10px]">ถึง</span>
-                          <input
-                            type="time"
-                            value={sch.breakEnd}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setSchedules(prev => prev.map(s => s.staffId === sch.staffId ? { ...s, breakEnd: val } : s));
-                            }}
+                          <input type="time" value={selectedDay.breakEnd} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
+                            onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { breakEnd: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-amber-500 font-bold"
                           />
                         </div>
                       </div>
                     </div>
+                    {canManageSchedules && (
+                      <button type="button" onClick={() => handleSaveSchedule(sch)} disabled={mutatingResourceId === sch.staffId}
+                        className="w-full rounded-xl bg-emerald-500 py-2 font-bold text-slate-950 disabled:opacity-50">
+                        {mutatingResourceId === sch.staffId ? 'กำลังบันทึก...' : 'บันทึกตารางทั้งสัปดาห์'}
+                      </button>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -817,6 +778,7 @@ export default function AdminDashboard() {
                       <input
                         required
                         type="date"
+                        disabled={shopRole === 'staff'}
                         value={specialHolidayDate}
                         onChange={(e) => setSpecialHolidayDate(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-rose-400 font-bold focus:outline-none focus:border-rose-500"
@@ -828,6 +790,7 @@ export default function AdminDashboard() {
                       <label className="text-xs text-slate-300 block mb-1 font-semibold">เหตุผลวันหยุด</label>
                       <input
                         type="text"
+                        disabled={shopRole === 'staff'}
                         placeholder="เช่น วันแม่แห่งชาติ / สัมมนาประจำปี"
                         value={specialHolidayReason}
                         onChange={(e) => setSpecialHolidayReason(e.target.value)}
@@ -837,7 +800,8 @@ export default function AdminDashboard() {
 
                     <button
                       type="submit"
-                      className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all"
+                      disabled={shopRole === 'staff' || mutatingResourceId === 'holiday-new'}
+                      className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Plus className="w-4 h-4" />
                       เพิ่มวันหยุดพิเศษ
@@ -861,8 +825,8 @@ export default function AdminDashboard() {
                       </div>
                     ) : (
                       <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                        {holidaysList.map((h, i) => (
-                          <div key={i} className="flex justify-between items-center bg-slate-900 border border-rose-500/30 rounded-xl p-3 text-xs hover:border-rose-500/60 transition-all shadow-sm">
+                        {holidaysList.map((h) => (
+                          <div key={h.id} className="flex justify-between items-center bg-slate-900 border border-rose-500/30 rounded-xl p-3 text-xs hover:border-rose-500/60 transition-all shadow-sm">
                             <div className="flex items-center gap-3">
                               <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 font-mono font-bold px-2.5 py-1 rounded-lg text-xs">
                                 📅 {h.date}
@@ -870,8 +834,9 @@ export default function AdminDashboard() {
                               <span className="text-slate-200 font-semibold">{h.reason || 'ร้านปิดทำการประจำปี'}</span>
                             </div>
                             <button
-                              onClick={() => setHolidaysList(prev => prev.filter((_, idx) => idx !== i))}
-                              className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-all"
+                              onClick={() => handleDeleteHoliday(h.id)}
+                              disabled={shopRole === 'staff' || mutatingResourceId === h.id}
+                              className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-all disabled:cursor-not-allowed disabled:opacity-40"
                               title="ลบวันหยุดนี้"
                             >
                               <Trash2 className="w-4 h-4" />

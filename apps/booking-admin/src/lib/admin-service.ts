@@ -58,11 +58,34 @@ export interface DashboardStaff {
   isActive: boolean;
 }
 
+export interface DashboardScheduleDay {
+  dayOfWeek: number;
+  isWorkingDay: boolean;
+  workStart: string;
+  workEnd: string;
+  breakStart: string;
+  breakEnd: string;
+}
+
+export interface DashboardStaffSchedule {
+  staffId: string;
+  staffName: string;
+  days: DashboardScheduleDay[];
+}
+
+export interface DashboardHoliday {
+  id: string;
+  date: string;
+  reason: string;
+}
+
 export interface AdminDashboardData {
   shop: DashboardShop;
   bookings: DashboardBooking[];
   services: DashboardService[];
   staff: DashboardStaff[];
+  schedules: DashboardStaffSchedule[];
+  holidays: DashboardHoliday[];
 }
 
 interface RelationName {
@@ -110,6 +133,22 @@ interface RawStaff {
   is_active: boolean;
 }
 
+interface RawSchedule {
+  staff_id: string;
+  day_of_week: number;
+  is_working_day: boolean;
+  work_start: string;
+  work_end: string;
+  break_start: string | null;
+  break_end: string | null;
+}
+
+interface RawHoliday {
+  id: string;
+  holiday_date: string;
+  reason: string | null;
+}
+
 function firstRelation<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
@@ -136,7 +175,7 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     throw new Error(membershipError?.message || 'ไม่พบสิทธิ์ร้านค้าของบัญชีนี้');
   }
 
-  const [shopResult, bookingsResult, servicesResult, staffResult] = await Promise.all([
+  const [shopResult, bookingsResult, servicesResult, staffResult, schedulesResult, holidaysResult] = await Promise.all([
     supabase
       .from('shops')
       .select('id, name, slug')
@@ -173,6 +212,17 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       .eq('shop_id', membership.shop_id)
       .order('is_active', { ascending: false })
       .order('created_at', { ascending: true }),
+    supabase
+      .from('staff_schedules')
+      .select('staff_id, day_of_week, is_working_day, work_start, work_end, break_start, break_end')
+      .eq('shop_id', membership.shop_id)
+      .order('day_of_week', { ascending: true }),
+    supabase
+      .from('shop_holidays')
+      .select('id, holiday_date, reason')
+      .eq('shop_id', membership.shop_id)
+      .is('staff_id', null)
+      .order('holiday_date', { ascending: true }),
   ]);
 
   if (shopResult.error || !shopResult.data) {
@@ -190,6 +240,18 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
   if (staffResult.error) {
     throw new Error(staffResult.error.message);
   }
+
+  if (schedulesResult.error) throw new Error(schedulesResult.error.message);
+  if (holidaysResult.error) throw new Error(holidaysResult.error.message);
+
+  const rawSchedules = (schedulesResult.data ?? []) as RawSchedule[];
+  const dashboardStaff = ((staffResult.data ?? []) as unknown as RawStaff[]).map((staffMember) => ({
+    id: staffMember.id,
+    name: staffMember.name,
+    phone: staffMember.phone ?? '-',
+    role: staffMember.nickname || 'พนักงานให้บริการ',
+    isActive: staffMember.is_active,
+  }));
 
   const bookings = ((bookingsResult.data ?? []) as unknown as RawBooking[]).map((booking) => {
     const customer = firstRelation(booking.customers);
@@ -228,14 +290,75 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       deposit: toAmount(service.deposit_amount),
       isActive: service.is_active,
     })),
-    staff: ((staffResult.data ?? []) as unknown as RawStaff[]).map((staffMember) => ({
-      id: staffMember.id,
-      name: staffMember.name,
-      phone: staffMember.phone ?? '-',
-      role: staffMember.nickname || 'พนักงานให้บริการ',
-      isActive: staffMember.is_active,
+    staff: dashboardStaff,
+    schedules: dashboardStaff.map((staffMember) => ({
+      staffId: staffMember.id,
+      staffName: staffMember.name,
+      days: Array.from({ length: 7 }, (_, dayOfWeek) => {
+        const schedule = rawSchedules.find((row) => (
+          row.staff_id === staffMember.id && row.day_of_week === dayOfWeek
+        ));
+        return schedule ? {
+          dayOfWeek,
+          isWorkingDay: schedule.is_working_day,
+          workStart: schedule.work_start.slice(0, 5),
+          workEnd: schedule.work_end.slice(0, 5),
+          breakStart: schedule.break_start?.slice(0, 5) ?? '',
+          breakEnd: schedule.break_end?.slice(0, 5) ?? '',
+        } : {
+          dayOfWeek,
+          isWorkingDay: false,
+          workStart: '10:00',
+          workEnd: '19:00',
+          breakStart: '12:00',
+          breakEnd: '13:00',
+        };
+      }),
+    })),
+    holidays: ((holidaysResult.data ?? []) as RawHoliday[]).map((holiday) => ({
+      id: holiday.id,
+      date: holiday.holiday_date,
+      reason: holiday.reason ?? 'วันหยุดพิเศษร้านค้า',
     })),
   };
+}
+
+export async function saveStaffWeeklySchedule(
+  staffId: string,
+  days: DashboardScheduleDay[],
+): Promise<void> {
+  const { error } = await supabase.rpc('upsert_staff_weekly_schedule', {
+    p_staff_id: staffId,
+    p_days: days.map((day) => ({
+      day_of_week: day.dayOfWeek,
+      is_working_day: day.isWorkingDay,
+      work_start: day.workStart,
+      work_end: day.workEnd,
+      break_start: day.breakStart || null,
+      break_end: day.breakEnd || null,
+    })),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function createShopHoliday(shopId: string, date: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('create_shop_holiday', {
+    p_shop_id: shopId,
+    p_holiday_date: date,
+    p_reason: reason,
+    p_idempotency_key: crypto.randomUUID(),
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteShopHoliday(holidayId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_shop_holiday', {
+    p_holiday_id: holidayId,
+  });
+
+  if (error) throw new Error(error.message);
 }
 
 export interface ServiceInput {
