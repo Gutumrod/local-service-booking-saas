@@ -10,12 +10,13 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 ---
 
-## 🟢 Status: Phase 1 Backend Integration Complete (2026-08-07)
+## 🟢 Status: Phase 1 Backend Integration + Phase A Hardening Complete (2026-08-07)
 
-- ✅ **Supabase PostgreSQL Database Engine (`local_service` schema):** 4 Migrations applied to active project `gyleqrjdzwwlqierdwcy`. Atomic slot lock RPC `create_booking_hold` with 15-minute countdown, non-confusing booking code generator (`BK-XXXXXX`), and 2-axis status audit triggers.
-- ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):** Fully functional LINE Webhook Gateway with HMAC-SHA256 signature verification, parsing `ผูกคิว {booking_code}-{link_token}` commands, binding `line_users` in Supabase, and replying with custom LINE Flex Cards.
+- ✅ **Supabase PostgreSQL Database Engine (`local_service` schema):** All migrations under `supabase/migrations/` applied and verified against the live project `gyleqrjdzwwlqierdwcy`. Atomic slot lock RPC `create_booking_hold` with 15-minute countdown, non-confusing booking code generator (`BK-XXXXXX`), 2-axis status audit triggers, and a real Postgres exclusion constraint (`prevent_overlapping_staff_bookings`) verified under concurrent load — see [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md).
+- ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):** Endpoint implemented with HMAC-SHA256 signature verification, parsing `ผูกคิว {booking_code}-{link_token}` commands, binding `line_users` in Supabase, and replying with custom LINE Flex Cards. **Currently non-functional against RLS with the anon key** — needs the service_role fix in Phase B (not started).
 - ✅ **Single Shared Environment Configuration (`.env.local`):** Master configuration at workspace root (`.env.local`) hardlinked to both `apps/booking-consumer` and `apps/booking-admin`.
-- ✅ **Frontend App Integration:** Connected `/book/[slug]` and `/dashboard` to live Supabase backend services.
+- ✅ **Consumer booking flow (`/book/[slug]`):** Connected to live Supabase backend and manually verified end-to-end (hold → deposit slip upload to Storage → status transitions).
+- ⚠️ **Shop owner dashboard (`/dashboard`) is NOT connected to the backend.** It still renders hardcoded mock data (`INITIAL_BOOKINGS`); `apps/booking-admin/src/lib/admin-service.ts` exists with the right functions but is not imported anywhere yet. See Phase E in [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md).
 
 ---
 
@@ -23,10 +24,12 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 1. 📋 **[`PRODUCT_RULES_V1.md`](PRODUCT_RULES_V1.md):** กติกาธุรกิจ 10 ข้อหลัก (Single Source of Truth) ที่ระบบและ Database Schema อ้างอิง
 2. 📄 **[`docs/technical/BRIEF_PHASE1_AGY.md`](docs/technical/BRIEF_PHASE1_AGY.md):** บรีฟงาน Phase 1 พร้อมตารางสรุปจุดเปลี่ยนสถาปัตยกรรม (Architectural Reversals & Pivots)
-3. 🏆 **[`docs/business/OFFICIAL_BUSINESS_MODEL.md`](docs/business/OFFICIAL_BUSINESS_MODEL.md):** เอกสารแผนธุรกิจและสถาปัตยกรรมระบบฉบับสมบูรณ์ 100%
-4. 💰 **[`docs/business/PRICING_SPEC.md`](docs/business/PRICING_SPEC.md):** ข้อกำหนดราคา สิทธิแพ็กเกจ (5/5/10 ช่าง) และแพ็กเกจเติมคิวเสริม
-5. 🗺️ **[`docs/archive/ROADMAP_V2_V4.md`](docs/archive/ROADMAP_V2_V4.md):** แผนที่การดำเนินงานโครงการ V2 - V4
-6. 🛡️ **[`docs/technical/ARCHITECTURE_SECURITY_STANDARD.md`](docs/technical/ARCHITECTURE_SECURITY_STANDARD.md):** มาตรฐานสถาปัตยกรรมและความปลอดภัย (Supabase Live Project `https://gyleqrjdzwwlqierdwcy.supabase.co`)
+3. 🛠️ **[`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md):** แผนงาน Phase A-E (data integrity/authorization hardening → LINE webhook fix → frontend fixes → docs → admin dashboard wiring) พร้อม Definition of Done แต่ละเฟส
+4. ✅ **[`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md):** รายงานผลการ apply + verify Phase A จริงบน live database
+5. 🏆 **[`docs/business/OFFICIAL_BUSINESS_MODEL.md`](docs/business/OFFICIAL_BUSINESS_MODEL.md):** เอกสารแผนธุรกิจและสถาปัตยกรรมระบบฉบับสมบูรณ์ 100%
+6. 💰 **[`docs/business/PRICING_SPEC.md`](docs/business/PRICING_SPEC.md):** ข้อกำหนดราคา สิทธิแพ็กเกจ (5/5/10 ช่าง) และแพ็กเกจเติมคิวเสริม
+7. 🗺️ **[`docs/archive/ROADMAP_V2_V4.md`](docs/archive/ROADMAP_V2_V4.md):** แผนที่การดำเนินงานโครงการ V2 - V4
+8. 🛡️ **[`docs/technical/ARCHITECTURE_SECURITY_STANDARD.md`](docs/technical/ARCHITECTURE_SECURITY_STANDARD.md):** มาตรฐานสถาปัตยกรรมและความปลอดภัย (Supabase Live Project `https://gyleqrjdzwwlqierdwcy.supabase.co`)
 
 ---
 
@@ -65,3 +68,7 @@ npm run dev:shop
 # Run shop admin dashboard (Port 3001)
 npm run dev:admin
 ```
+
+### ⚠️ Required manual step on any fresh Supabase project
+
+After applying all migrations in `supabase/migrations/` to a new/fresh Supabase project, you **must** manually add `local_service` to **Exposed schemas**: Supabase Dashboard → Project Settings → API → Data API → Exposed schemas. This cannot be done via SQL, the Management API, or any known Supabase CLI/MCP tool — it is Dashboard-UI-only. Skipping this step makes every table/RPC call return `406 PGRST106: Invalid schema` even though the schema and RLS grants are otherwise correct. This bit the team once already (2026-08-07) before being diagnosed.

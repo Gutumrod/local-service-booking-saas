@@ -2,7 +2,7 @@
 
 > **โปรเจกต์:** Local Service Booking & LINE Automation SaaS  
 > **ผู้พัฒนาหลัก:** คุณฟรี (CEO) & Antigravity AI Pair Programmer  
-> **สถานะปัจจุบัน:** **Phase 1 Backend Integration & LINE OA Webhook Gateway (100% Complete & Verified)**  
+> **สถานะปัจจุบัน:** **Phase 1 Backend Integration เสร็จบางส่วน + Phase A (Data Integrity & Authorization Hardening) เสร็จสมบูรณ์ 100% ผ่านการ verify จริง (2026-08-07)** — ดูรายละเอียดที่ [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md) และแผนต่อ [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)  
 > **Supabase Live Project:** `https://gyleqrjdzwwlqierdwcy.supabase.co` (`local_service` schema)  
 > **GitHub Repository:** [`https://github.com/Gutumrod/local-service-booking-saas`](https://github.com/Gutumrod/local-service-booking-saas)
 
@@ -34,28 +34,37 @@ D:\AI-Workspace\projects\local-service-booking-saas
 
 ---
 
-## 3. สรุปผลงานที่เสร็จสิ้นใน Phase 1 Backend Integration (100% Verified)
+## 3. สรุปผลงานที่เสร็จสิ้นจริง (ตรวจยืนยันผ่าน REST API จริง ไม่ใช่แค่ execute_sql)
 
-1. ✅ **Supabase PostgreSQL Engine (`local_service` schema):**
-   - รัน SQL Migrations ทั้ง 4 ไฟล์ลงบน Supabase Project `gyleqrjdzwwlqierdwcy`
-   - รัน RPC `create_booking_hold` บน DB ล็อกสล็อตเวลา 15 นาทีอัตโนมัติ ออกรหัสจอง `BK-XXXXXX` และ Link Token ป้องกันคิวชนด้วย Exclusion Constraint
-   - Seed ข้อมูลร้านค้าตัวอย่าง **Good Cuts Barber** (`slug: good-cuts-barber`) พร้อมบริการและช่างเรียบร้อย
+1. ✅ **Supabase PostgreSQL Engine (`local_service` schema) — Phase 1 + Phase A:**
+   - Apply migration ทั้งหมดใน `supabase/migrations/` ลงบน Supabase Project `gyleqrjdzwwlqierdwcy` จริง (ระหว่างทางเจอและแก้บั๊ก syntax/trigger-timing/exclusion-constraint ที่ทำให้ apply ไม่ผ่านหรือใช้งานไม่ได้จริงหลายจุด)
+   - RPC `create_booking_hold` ล็อกสล็อตเวลา 15 นาที ออกรหัสจอง `BK-XXXXXX` กันคิวชนด้วย Postgres Exclusion Constraint จริง (ทดสอบ race condition ด้วย concurrent request 2 อันแย่ง slot เดียวกันแล้วผ่าน)
+   - Seed ข้อมูลร้านค้าตัวอย่าง **Good Cuts Barber** (`slug: good-cuts-barber`) พร้อมบริการ/ช่าง/ตารางงาน/วันหยุด
+   - **Phase A hardening:** ปิดช่องโหว่ privileged RPC ที่ anon เรียกได้, ปิด anon direct insert ข้าม RPC, validate slip URL ผูกกับ booking จริง — ดู [`PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md)
 2. ✅ **Single Shared Environment Configuration (`.env.local`):**
    - สร้างไฟล์ `.env.local` ตัวหลักที่ root directory และทำ Hardlink เชื่อมตรงไปยังทั้ง 2 apps
    - รองรับการตั้งค่า `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_CENTRAL_LINE_OA_ID`, `LINE_CHANNEL_SECRET` และ `LINE_CHANNEL_ACCESS_TOKEN` ในจุดเดียว
-3. ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):**
-   - พัฒนา Webhook endpoint บน Next.js API Routes สำหรับตรวจสอบ HMAC-SHA256 Signatures
-   - ถอดรหัสคำสั่ง `ผูกคิว {booking_code}-{link_token}` และบันทึกผูกตัวตน `line_users` ใน Supabase
-   - สร้างและส่ง **LINE Flex Card** แจ้งเตือนใบนัดหมายตอบกลับไปยังลูกค้าอัตโนมัติ
-4. ✅ **เชื่อมต่อ Frontend เข้ากับ Backend:**
-   - หน้า `/book/[slug]` ฝั่งลูกค้า และหน้า `/dashboard` ฝั่งร้านค้า ดึงข้อมูลและอัปเดตสถานะผ่าน Supabase PostgreSQL จริง
+3. ⚠️ **LINE OA Webhook Gateway (`/api/line/webhook`) — เขียนโค้ดไว้แล้ว แต่ใช้งานจริงไม่ได้:**
+   - มี HMAC-SHA256 signature verification, parse คำสั่ง `ผูกคิว {booking_code}-{link_token}` ครบ
+   - **แต่ใช้ anon key ยิงเข้าตารางที่ RLS บล็อกไว้เฉพาะ shop member** ทำให้ query/update จริงล้มเหลวเงียบๆ (endpoint ยังตอบ success หลอก) ต้องแก้ใน **Phase B** (ยังไม่เริ่ม — รอ `SUPABASE_SERVICE_ROLE_KEY`)
+4. ✅ **เชื่อมต่อ Frontend เข้ากับ Backend (บางส่วน):**
+   - หน้า `/book/[slug]` ฝั่งลูกค้า **เชื่อมและทดสอบ end-to-end จริงแล้ว** (จอง → ล็อกสล็อต → อัปโหลดสลิปเข้า Supabase Storage จริง → ยืนยัน)
+   - **หน้า `/dashboard` ฝั่งร้านค้า ยังไม่เชื่อม backend เลย** — ยังใช้ mock data (`INITIAL_BOOKINGS`) `apps/booking-admin/src/lib/admin-service.ts` มีฟังก์ชันครบแล้วแต่ไม่ถูก import ใช้ที่ไหน ต้องรอ **Phase E** (ต้องออกแบบ auth flow ให้ shop owner ก่อน)
 
 ---
 
 ### 📌 เอกสารอ้างอิงสำคัญในโปรเจกต์
 - 🏠 **Project README:** [`README.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/README.md)
 - 📄 **Master Spec & Rules:** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
-��บริการ ราคา ยอดมัดจำ ระยะเวลา
+- 🛠️ **แผนงาน Phase A-E:** [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)
+
+## 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`) — ⚠️ ยังเป็น mock, ไม่ได้เชื่อม backend
+
+- 6 แท็บการทำงาน (UI ล็อกดีไซน์แล้ว แต่ข้อมูลยังเป็น mock ทั้งหมด):
+  1. `bookings`: ตารางคิวงาน ฟอนต์ใหญ่ อ่านง่าย มีปุ่ม `ยกเลิกคิว` และป๊อบอัพตรวจสลิปมัดจำมีปุ่ม X/ปิดหน้าต่าง
+  2. `schedules`: จัดการเวลาเปิด-ปิด ตารางเวลาพนักงานแบบ 3 คอลัมน์จัตุรัส และฟอร์มวันหยุดพิเศษแบบ Split View
+  3. `staff`: เพิ่ม/ลบพนักงาน ปรับสถานะการทำงาน
+  4. `services`: เพิ่ม/แก้ไขบริการ ราคา ยอดมัดจำ ระยะเวลา
   5. `settings`: ตั้งค่า PromptPay, โลโก้ร้าน, และเลือกสลับ **LINE กลางของระบบ (@central_booking_oa)** หรือ LINE ร้านค้า
   6. `billing`: ดูโควตาคิวจอง ประวัติแพ็กเกจ และปุ่มอัปเกรดผูกลิงก์ไปหน้า `/register`
 
@@ -84,17 +93,24 @@ D:\AI-Workspace\projects\local-service-booking-saas
 
 ---
 
-## 5. แผนการดำเนินงานต่อใน Phase 1 (Roadmap & Next Steps)
+## 5. แผนการดำเนินงานต่อ (Roadmap & Next Steps)
+
+Phase A เสร็จแล้ว งานที่เหลือแบ่งเป็น Phase B-E ตาม [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md) — **ห้ามข้ามลำดับเฟส** แต่ละเฟสต้อง verify DoD ผ่าน REST API จริงก่อนเริ่มเฟสถัดไป:
+
+- **Phase B:** แก้ LINE webhook ให้ใช้ `SUPABASE_SERVICE_ROLE_KEY` (มีเตรียมไว้ใน `D:\AI-Workspace\.secrets\keys.txt` แล้ว ยังไม่ใส่ `.env.local`)
+- **Phase C:** แก้ frontend no-deposit flow (บริการไม่มีมัดจำยังถูกบังคับไปหน้าอัปโหลดสลิปอยู่)
+- **Phase D:** เพิ่มเอกสารขั้นตอน manual "Exposed schemas" กันเจอ `406 PGRST106` ซ้ำตอน deploy ใหม่ (ทำใน README แล้วบางส่วน)
+- **Phase E:** ต่อ `/dashboard` เข้า backend จริง — ต้องออกแบบ auth flow ให้ shop owner ก่อนเริ่ม (งานใหญ่สุด แยกคุยขอบเขตต่างหาก)
 
 เมื่อเปิดแชทใหม่ ให้บอก AI Agent ในแชทใหม่ดังนี้:
 
 ```text
-"สวัสดีครับ ผมต้องการลุยโปรเจกต์ Local Service Booking SaaS ต่อใน Phase 1 Backend Integration 
-โปรดอ่านไฟล์ PRODUCT_RULES_V1.md และ PROJECT_HANDOVER_BRIEF.md ในคลังไฟล์ 
+"สวัสดีครับ ผมต้องการลุยโปรเจกต์ Local Service Booking SaaS ต่อ
+โปรดอ่านไฟล์ PRODUCT_RULES_V1.md, PROJECT_HANDOVER_BRIEF.md,
+docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md และ
+docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md ในคลังไฟล์
 
-ภารกิจของเราใน Phase 1 คือ:
-1. ออกแบบและต่อสายไฟฐานข้อมูล Supabase PostgreSQL (ตาราง shops, bookings, services, staff, schedules)
-2. สร้าง LINE OA Webhook Gateway (/api/line/webhook) สำหรับยิง Flex Card แจ้งเตือนเข้า LINE จริง"
+Phase A (data integrity & authorization) เสร็จแล้ว ต่อ Phase B (LINE webhook service_role fix) ตามบรีฟ Phase A-E"
 ```
 
 ---
