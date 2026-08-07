@@ -427,7 +427,8 @@ $$;
 
 REVOKE ALL ON FUNCTION local_service.extend_booking_hold(UUID) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION local_service.extend_booking_hold(UUID) FROM anon;
-GRANT EXECUTE ON FUNCTION local_service.extend_booking_hold(UUID) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION local_service.extend_booking_hold(UUID) FROM service_role;
+GRANT EXECUTE ON FUNCTION local_service.extend_booking_hold(UUID) TO authenticated;
 
 CREATE OR REPLACE FUNCTION local_service.reject_deposit_slip(
     p_booking_id UUID,
@@ -440,7 +441,6 @@ SET search_path = pg_catalog, local_service
 AS $$
 DECLARE
     v_booking local_service.bookings%ROWTYPE;
-    v_history_id UUID;
 BEGIN
     SELECT * INTO v_booking
     FROM local_service.bookings
@@ -455,6 +455,9 @@ BEGIN
             ERRCODE = '42501',
             MESSAGE = 'Not authorized for this shop';
     END IF;
+    IF v_booking.status <> 'pending_review' OR v_booking.deposit_status <> 'submitted' THEN
+        RAISE EXCEPTION 'Only submitted deposit slips can be rejected';
+    END IF;
 
     UPDATE local_service.bookings
     SET status = 'hold',
@@ -463,17 +466,25 @@ BEGIN
         updated_at = NOW()
     WHERE id = p_booking_id;
 
-    SELECT h.id INTO v_history_id
-    FROM local_service.booking_status_history h
-    WHERE h.booking_id = p_booking_id
-    ORDER BY h.created_at DESC, h.id DESC
-    LIMIT 1;
-
-    IF v_history_id IS NOT NULL THEN
-        UPDATE local_service.booking_status_history
-        SET reason = COALESCE(NULLIF(btrim(p_reason), ''), 'Slip Rejected by Shop')
-        WHERE id = v_history_id;
-    END IF;
+    -- Keep a dedicated reason-bearing audit row. The generic AFTER UPDATE
+    -- trigger row is intentionally preserved, so each rejection has two rows.
+    INSERT INTO local_service.booking_status_history (
+        booking_id,
+        old_status,
+        new_status,
+        old_deposit_status,
+        new_deposit_status,
+        changed_by,
+        reason
+    ) VALUES (
+        p_booking_id,
+        v_booking.status,
+        'hold',
+        v_booking.deposit_status,
+        'rejected',
+        auth.uid(),
+        COALESCE(NULLIF(btrim(p_reason), ''), 'Slip Rejected by Shop')
+    );
 
     RETURN json_build_object(
         'success', true,
@@ -484,4 +495,10 @@ $$;
 
 REVOKE ALL ON FUNCTION local_service.reject_deposit_slip(UUID, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION local_service.reject_deposit_slip(UUID, TEXT) FROM anon;
-GRANT EXECUTE ON FUNCTION local_service.reject_deposit_slip(UUID, TEXT) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION local_service.reject_deposit_slip(UUID, TEXT) FROM service_role;
+GRANT EXECUTE ON FUNCTION local_service.reject_deposit_slip(UUID, TEXT) TO authenticated;
+
+-- Public booking creation must go through create_booking_hold so its input,
+-- deposit, holiday, schedule, and overlap checks cannot be bypassed.
+REVOKE INSERT ON TABLE local_service.customers FROM PUBLIC, anon;
+REVOKE INSERT ON TABLE local_service.bookings FROM PUBLIC, anon;
