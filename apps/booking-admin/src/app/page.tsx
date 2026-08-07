@@ -45,10 +45,10 @@ export default function Home() {
           </Link>
 
           <Link
-            href="/dashboard"
+            href="/login"
             className="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 py-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
           >
-            เข้าสู่ระบบหลังบ้านร้านค้าเดโม (Dashboard Demo)
+            เข้าสู่ระบบหลังบ้านร้านค้า
           </Link>
         </div>
       </div>

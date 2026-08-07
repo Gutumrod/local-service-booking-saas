@@ -1,11 +1,12 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 import { 
-  Store, User, Phone, Mail, Lock, Sparkles, Check, ArrowRight, ArrowLeft, 
-  QrCode, CreditCard, ShieldCheck, HelpCircle, Building, CheckCircle2, Globe
+  Store, Mail, Sparkles, ArrowRight, ArrowLeft, QrCode, CreditCard,
+  ShieldCheck, Building, CheckCircle2, Globe
 } from 'lucide-react';
 
 const SUGGESTED_CATEGORIES = [
@@ -18,6 +19,21 @@ const SUGGESTED_CATEGORIES = [
   '🏸 สนามแบดมินตัน / สนามฟุตซอล',
   '🐾 อาบน้ำตัดขนสัตว์เลี้ยง (Pet Grooming)'
 ];
+
+const PENDING_REGISTRATION_KEY = 'local-service.pending-owner-registration';
+
+interface PendingRegistration {
+  shopName: string;
+  shopSlug: string;
+  businessCategory: string;
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
+  selectedPlan: 'free_trial' | 'basic_490' | 'pro_990';
+  promptpayNumber: string;
+  promptpayName: string;
+  idempotencyKey: string;
+}
 
 function RegisterFormContent() {
   const router = useRouter();
@@ -36,14 +52,12 @@ function RegisterFormContent() {
   const [password, setPassword] = useState('');
 
   // Step 2: Plan Selection
-  const [selectedPlan, setSelectedPlan] = useState<'free_trial' | 'basic_490' | 'pro_990'>('free_trial');
+  const [selectedPlan, setSelectedPlan] = useState<'free_trial' | 'basic_490' | 'pro_990'>(() =>
+    planParam === 'basic_490' || planParam === 'pro_990' || planParam === 'free_trial'
+      ? planParam
+      : 'free_trial'
+  );
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-
-  useEffect(() => {
-    if (planParam === 'basic_490' || planParam === 'pro_990' || planParam === 'free_trial') {
-      setSelectedPlan(planParam);
-    }
-  }, [planParam]);
 
   // Step 3: PromptPay Setup
   const [promptpayNumber, setPromptpayNumber] = useState('');
@@ -52,6 +66,68 @@ function RegisterFormContent() {
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isAwaitingEmail, setIsAwaitingEmail] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(() => searchParams.get('auth_error') ?? '');
+  const resumeAttemptedRef = useRef(false);
+
+  const provisionShop = useCallback(async (registration: PendingRegistration) => {
+    const supabase = createClient();
+    const { error } = await supabase.rpc('provision_owner_shop', {
+      p_shop_name: registration.shopName,
+      p_shop_slug: registration.shopSlug,
+      p_business_category: registration.businessCategory,
+      p_owner_name: registration.ownerName,
+      p_owner_phone: registration.ownerPhone,
+      p_promptpay_number: registration.promptpayNumber,
+      p_promptpay_name: registration.promptpayName,
+      p_requested_plan: registration.selectedPlan,
+      p_idempotency_key: registration.idempotencyKey,
+    });
+
+    if (error) throw error;
+
+    localStorage.removeItem(PENDING_REGISTRATION_KEY);
+    setIsAwaitingEmail(false);
+    setIsSuccess(true);
+    setTimeout(() => router.replace('/dashboard'), 1200);
+  }, [router]);
+
+  useEffect(() => {
+    if (resumeAttemptedRef.current) return;
+    resumeAttemptedRef.current = true;
+
+    const resumeProvisioning = async () => {
+      const rawRegistration = localStorage.getItem(PENDING_REGISTRATION_KEY);
+      if (!rawRegistration) return;
+
+      let registration: PendingRegistration;
+      try {
+        registration = JSON.parse(rawRegistration) as PendingRegistration;
+      } catch {
+        localStorage.removeItem(PENDING_REGISTRATION_KEY);
+        setErrorMessage('ข้อมูลสมัครที่พักไว้เสียหาย กรุณากรอกใหม่อีกครั้ง');
+        return;
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) {
+        setIsAwaitingEmail(true);
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        await provisionShop(registration);
+      } catch (provisionError) {
+        setErrorMessage(provisionError instanceof Error ? provisionError.message : 'สร้างร้านค้าไม่สำเร็จ');
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    void resumeProvisioning();
+  }, [provisionShop]);
 
   // Auto generate slug from shop name (handles English & Thai gracefully)
   const handleShopNameChange = (val: string) => {
@@ -88,15 +164,54 @@ function RegisterFormContent() {
     }
   };
 
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
+    setErrorMessage('');
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    const registration: PendingRegistration = {
+      shopName: shopName.trim(),
+      shopSlug: shopSlug.trim(),
+      businessCategory: businessCategory.trim(),
+      ownerName: ownerName.trim(),
+      ownerPhone: ownerPhone.trim(),
+      ownerEmail: ownerEmail.trim().toLowerCase(),
+      selectedPlan,
+      promptpayNumber: promptpayNumber.trim(),
+      promptpayName: promptpayName.trim(),
+      idempotencyKey: crypto.randomUUID(),
+    };
+
+    localStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(registration));
+
+    try {
+      const supabase = createClient();
+      const { data: currentUser } = await supabase.auth.getUser();
+
+      if (currentUser.user) {
+        await provisionShop(registration);
+        return;
+      }
+
+      const configuredSiteUrl = process.env.NEXT_PUBLIC_ADMIN_SITE_URL?.replace(/\/$/, '');
+      const callbackUrl = `${configuredSiteUrl || window.location.origin}/auth/callback?next=/register`;
+      const { data, error } = await supabase.auth.signUp({
+        email: registration.ownerEmail,
+        password,
+        options: { emailRedirectTo: callbackUrl },
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        await provisionShop(registration);
+      } else {
+        setIsAwaitingEmail(true);
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'สมัครบัญชีหรือสร้างร้านค้าไม่สำเร็จ');
+    } finally {
       setIsSubmitting(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
-    }, 1200);
+    }
   };
 
   return (
@@ -132,6 +247,12 @@ function RegisterFormContent() {
 
         {/* Form Main Container */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+          {errorMessage && (
+            <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
+              {errorMessage}
+            </p>
+          )}
+
           {isSuccess ? (
             <div className="text-center py-10 space-y-4 animate-fade-in">
               <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/40">
@@ -139,6 +260,18 @@ function RegisterFormContent() {
               </div>
               <h2 className="text-xl font-bold text-white">ลงทะเบียนสร้างร้านค้าเรียบร้อยแล้ว! 🎉</h2>
               <p className="text-xs text-slate-400">กำลังนำท่านเข้าสู่หน้าแดชบอร์ดหลังบ้านร้านค้า...</p>
+            </div>
+          ) : isAwaitingEmail ? (
+            <div className="text-center py-10 space-y-4 animate-fade-in">
+              <div className="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto border border-amber-500/40">
+                <Mail className="w-9 h-9" />
+              </div>
+              <h2 className="text-xl font-bold text-white">เช็คอีเมลเพื่อยืนยันบัญชี</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                ส่งลิงก์ยืนยันไปที่ <span className="font-semibold text-white">{ownerEmail}</span> แล้ว<br />
+                เมื่อกดยืนยัน ระบบจะกลับมาหน้านี้และสร้างร้านค้าต่อให้อัตโนมัติ
+              </p>
+              <p className="text-[11px] text-slate-500">ยังไม่พบอีเมล ให้ตรวจโฟลเดอร์ Spam/Junk ก่อน</p>
             </div>
           ) : (
             <form onSubmit={handleNextStep} className="space-y-6">

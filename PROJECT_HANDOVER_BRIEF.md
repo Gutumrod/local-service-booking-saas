@@ -123,6 +123,13 @@ Phase A-D เสร็จแล้ว ต่อ Phase E (เชื่อม /das
 
 ขั้นตอนนี้ทำผ่าน SQL, Supabase Management API, หรือ MCP tool ใดๆ **ไม่ได้** ต้องกดผ่านหน้า Dashboard เท่านั้น ถ้าข้ามขั้นตอนนี้ไป ทุก request ที่ยิงเข้าตาราง/RPC ใน schema `local_service` จะได้ error `406 PGRST106: Invalid schema` แม้ migration และ RLS grants จะถูกต้องครบทุกอย่างแล้วก็ตาม — เคยเกิดขึ้นจริงกับโปรเจกต์นี้มาแล้วครั้งหนึ่ง (2026-08-07) กว่าจะวินิจฉัยเจอ
 
+### ⚠️ Auth Redirect URLs (เพิ่มใหม่จาก Phase E1 — ต้องอัปเดตอีกครั้งตอน deploy จริง)
+
+`/register` และ `/login` ของ `booking-admin` ใช้ Supabase Auth email/password + email confirmation จริง ซึ่งต้องเพิ่ม URL ไว้ล่วงหน้าที่ Dashboard → Authentication → URL Configuration:
+
+- **ตอนนี้ (dev, ใส่ไว้แล้ว 2026-08-07):** Site URL = `http://localhost:3001`, Redirect URLs = `http://localhost:3001/auth/callback` (+ `http://localhost:3001/**`)
+- **ตอน deploy ขึ้นโดเมนจริง (ยังไม่ทำ):** ต้องกลับมาเพิ่ม `https://<โดเมนจริง>/auth/callback` (และปรับ Site URL) ที่หน้าเดียวกัน — ถ้าลืม ลิงก์ยืนยันอีเมลที่ส่งจาก production จะ redirect ไม่ได้ (เข้าทำนองเดียวกับ Exposed Schemas ข้างบน คือทำผ่าน SQL/MCP ไม่ได้ ต้องกด Dashboard เอง)
+
 ---
 
 ### 📌 เอกสารอ้างอิงสำคัญในโปรเจกต์

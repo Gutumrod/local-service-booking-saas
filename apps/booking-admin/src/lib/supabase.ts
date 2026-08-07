@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from './supabase/client';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  db: {
-    schema: 'local_service'
-  }
-});
+// Backward-compatible browser client for the existing admin service.
+// Server Components and route handlers must use lib/supabase/server instead.
+export const supabase = createClient();
