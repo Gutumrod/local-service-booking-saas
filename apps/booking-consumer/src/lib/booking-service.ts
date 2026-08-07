@@ -20,7 +20,7 @@ export interface Service {
   description: string;
   duration_minutes: number;
   price: number;
-  deposit_amount: number;
+  deposit_amount: number | null;
 }
 
 export interface Staff {
@@ -68,11 +68,11 @@ export interface HoldResponse {
   booking_id: string;
   booking_code: string;
   link_token: string;
-  status: string;
-  deposit_status: string;
+  status: 'hold' | 'confirmed';
+  deposit_status: 'awaiting' | 'not_required';
   deposit_amount: number;
   total_price: number;
-  expires_at: string;
+  expires_at: string | null;
   staff_id: string;
 }
 

@@ -17,6 +17,10 @@ const CENTRAL_LINE_OA_ID = process.env.NEXT_PUBLIC_CENTRAL_LINE_OA_ID || 'centra
 
 const ALL_TIME_SLOTS = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00'];
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function BookingPage() {
   const params = useParams();
   const slug = (params?.slug as string) || 'good-cuts-barber';
@@ -150,7 +154,7 @@ export default function BookingPage() {
         const schedule = staffSchedules.find(
           item => item.staff_id === staff.id && item.day_of_week === dayOfWeek
         );
-        if (!schedule) return true;
+        if (!schedule) return false;
         if (!schedule.is_working_day) return false;
 
         const outsideWorkingHours =
@@ -195,10 +199,16 @@ export default function BookingPage() {
         start_time: selectedTime + ':00',
       });
       setHoldResult(res);
-      setTimeLeft(900); // 15 mins
-      setStep(3);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการล็อกรอบเวลา กรุณาลองใหม่อีกครั้ง');
+      if (res.status === 'confirmed' && res.deposit_status === 'not_required') {
+        setBookingSuccess(true);
+      } else if (res.status === 'hold' && res.deposit_status === 'awaiting') {
+        setTimeLeft(900); // 15 mins
+        setStep(3);
+      } else {
+        throw new Error('สถานะการจองไม่ถูกต้อง กรุณาติดต่อร้านค้า');
+      }
+    } catch (err: unknown) {
+      setErrorMessage(getErrorMessage(err, 'เกิดข้อผิดพลาดในการล็อกรอบเวลา กรุณาลองใหม่อีกครั้ง'));
     } finally {
       setIsSubmitting(false);
     }
@@ -225,8 +235,8 @@ export default function BookingPage() {
       const slipUrl = await uploadDepositSlip(holdResult.booking_id, slipFile);
       await submitDepositSlip(holdResult.booking_id, slipUrl);
       setBookingSuccess(true);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการส่งสลิป');
+    } catch (err: unknown) {
+      setErrorMessage(getErrorMessage(err, 'เกิดข้อผิดพลาดในการส่งสลิป'));
     } finally {
       setIsSubmitting(false);
     }
@@ -279,24 +289,44 @@ export default function BookingPage() {
         )}
 
         {bookingSuccess ? (
-          /* PENDING REVIEW / SUBMITTED STATE (PRODUCT_RULES_V1 SECTION 1.4) */
-          <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 text-center shadow-xl shadow-amber-950/40 animate-fade-in space-y-5">
-            <div className="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto border border-amber-500/30">
-              <Clock className="w-10 h-10 animate-pulse" />
+          /* CONFIRMED OR PENDING REVIEW STATE (PRODUCT_RULES_V1 SECTION 1.4) */
+          <div className={`bg-slate-900/90 rounded-2xl p-6 text-center shadow-xl animate-fade-in space-y-5 ${
+            holdResult?.status === 'confirmed'
+              ? 'border border-emerald-500/40 shadow-emerald-950/40'
+              : 'border border-amber-500/40 shadow-amber-950/40'
+          }`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto border ${
+              holdResult?.status === 'confirmed'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+            }`}>
+              {holdResult?.status === 'confirmed'
+                ? <CheckCircle2 className="w-10 h-10" />
+                : <Clock className="w-10 h-10 animate-pulse" />}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white mb-1">ได้รับสลิปแล้ว รอตรวจสอบสลิป</h2>
+              <h2 className="text-xl font-bold text-white mb-1">
+                {holdResult?.status === 'confirmed'
+                  ? 'ยืนยันคิวเรียบร้อย'
+                  : 'ได้รับสลิปแล้ว กำลังตรวจสอบการชำระเงิน'}
+              </h2>
               <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">{holdResult?.booking_code || 'BK-7K2M9Q'}</span></p>
             </div>
 
             {/* Receipt Card for Customer */}
-            <div className="bg-slate-950 border border-amber-500/30 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
+            <div className={`bg-slate-950 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md border ${
+              holdResult?.status === 'confirmed' ? 'border-emerald-500/30' : 'border-amber-500/30'
+            }`}>
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-white flex items-center gap-1">
                   <Clock className="w-4 h-4 text-amber-400" /> สถานะคิวจอง
                 </span>
-                <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-md font-bold">
-                  รอตรวจสอบสลิป
+                <span className={`text-[11px] px-2.5 py-0.5 rounded-md font-bold border ${
+                  holdResult?.status === 'confirmed'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                }`}>
+                  {holdResult?.status === 'confirmed' ? 'ยืนยันแล้ว' : 'รอตรวจสอบสลิป'}
                 </span>
               </div>
 
@@ -304,7 +334,11 @@ export default function BookingPage() {
                 <p>บริการ: <span className="font-semibold text-white">{selectedService?.name}</span></p>
                 <p>พนักงาน: <span className="font-semibold text-white">{selectedStaff?.nickname || 'ไม่ระบุพนักงาน (สุ่มช่าง)'}</span></p>
                 <p>เวลานัด: <span className="font-semibold text-emerald-400">{selectedDate} @ {selectedTime} น.</span></p>
-                <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit_amount ?? shop?.default_deposit_amount ?? 100}.00 (ส่งสลิปแล้ว)</span></p>
+                <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">
+                  {holdResult?.deposit_status === 'not_required'
+                    ? 'ไม่ต้องชำระมัดจำ'
+                    : `฿${holdResult?.deposit_amount ?? 0}.00 (ส่งสลิปแล้ว)`}
+                </span></p>
                 <p className="text-slate-400 pt-1">เบอร์สายตรงร้านค้า: <a href={`tel:${shopPhone.replace(/-/g, '')}`} className="font-mono font-bold text-amber-400 hover:underline">{shopPhone}</a></p>
               </div>
             </div>
