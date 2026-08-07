@@ -37,6 +37,11 @@ export interface DashboardShop {
   id: string;
   name: string;
   slug: string;
+  phone: string;
+  address: string;
+  promptpayNumber: string;
+  promptpayName: string;
+  lineOaId: string;
   role: 'owner' | 'admin' | 'staff';
 }
 
@@ -125,6 +130,17 @@ interface RawService {
   is_active: boolean;
 }
 
+interface RawShop {
+  id: string;
+  name: string;
+  slug: string;
+  phone: string | null;
+  address: string | null;
+  promptpay_number: string | null;
+  promptpay_name: string | null;
+  line_oa_id: string | null;
+}
+
 interface RawStaff {
   id: string;
   name: string;
@@ -178,7 +194,7 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
   const [shopResult, bookingsResult, servicesResult, staffResult, schedulesResult, holidaysResult] = await Promise.all([
     supabase
       .from('shops')
-      .select('id, name, slug')
+      .select('id, name, slug, phone, address, promptpay_number, promptpay_name, line_oa_id')
       .eq('id', membership.shop_id)
       .single(),
     supabase
@@ -275,9 +291,18 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     } satisfies DashboardBooking;
   });
 
+  const rawShop = shopResult.data as unknown as RawShop;
+
   return {
     shop: {
-      ...shopResult.data,
+      id: rawShop.id,
+      name: rawShop.name,
+      slug: rawShop.slug,
+      phone: rawShop.phone ?? '',
+      address: rawShop.address ?? '',
+      promptpayNumber: rawShop.promptpay_number ?? '',
+      promptpayName: rawShop.promptpay_name ?? '',
+      lineOaId: rawShop.line_oa_id ?? '',
       role: membership.role as DashboardShop['role'],
     },
     bookings,
@@ -321,6 +346,29 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       reason: holiday.reason ?? 'วันหยุดพิเศษร้านค้า',
     })),
   };
+}
+
+export interface ShopSettingsInput {
+  name: string;
+  phone: string;
+  address: string;
+  promptpayNumber: string;
+  promptpayName: string;
+  lineOaId: string;
+}
+
+export async function updateShopSettings(shopId: string, input: ShopSettingsInput): Promise<void> {
+  const { error } = await supabase.rpc('update_shop_settings', {
+    p_shop_id: shopId,
+    p_name: input.name,
+    p_phone: input.phone,
+    p_address: input.address,
+    p_promptpay_number: input.promptpayNumber,
+    p_promptpay_name: input.promptpayName,
+    p_line_oa_id: input.lineOaId,
+  });
+
+  if (error) throw new Error(error.message);
 }
 
 export async function saveStaffWeeklySchedule(

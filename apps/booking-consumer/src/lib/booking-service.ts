@@ -77,11 +77,15 @@ export interface HoldResponse {
 }
 
 export async function getShopBySlug(slug: string): Promise<Shop | null> {
+  // shop_public_profile exposes only customer-facing columns (name, phone,
+  // address, PromptPay, LINE OA ID, deposit config) and already filters to
+  // active shops -- unauthenticated clients can no longer select(*) on the
+  // shops table itself, which used to also return subscription_status,
+  // trial_ends_at, owner_name, etc.
   const { data, error } = await supabase
-    .from('shops')
+    .from('shop_public_profile')
     .select('*')
     .eq('slug', slug)
-    .eq('is_active', true)
     .single();
 
   if (error || !data) {

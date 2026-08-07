@@ -15,6 +15,7 @@ import {
   setServiceActive,
   setStaffActive,
   updateService,
+  updateShopSettings,
   type DashboardBooking,
   type DashboardService,
   type DashboardStaff,
@@ -25,7 +26,7 @@ import {
   Calendar, Users, DollarSign, Eye, Clock,
   Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
   QrCode, ExternalLink, CalendarOff, Coffee, Save,
-  Copy, MessageCircle, Send, Check, Trash2, Edit3, Lock,
+  Copy, MessageCircle, Check, Trash2, Edit3,
   PackagePlus, Scissors, Store, Globe, Phone, X
 } from 'lucide-react';
 
@@ -69,10 +70,10 @@ export default function AdminDashboard() {
 
   // Shop Profile State
   const [shopName, setShopName] = useState('กำลังโหลดข้อมูลร้าน...');
-  const [shopSlogan, setShopSlogan] = useState('ร้านตัดผมชายพรีเมียม & สปาหนังศีรษะ');
-  const [shopPhone, setShopPhone] = useState('081-234-5678');
+  const [shopPhone, setShopPhone] = useState('');
+  const [shopAddress, setShopAddress] = useState('');
   const [shopSlug, setShopSlug] = useState('');
-  const [shopProfileSaved, setShopProfileSaved] = useState(false);
+  const [shopSettingsSaved, setShopSettingsSaved] = useState(false);
   const [copiedLinkNotice, setCopiedLinkNotice] = useState(false);
 
   // Service Form State
@@ -88,11 +89,9 @@ export default function AdminDashboard() {
   const [bookingFilter, setBookingFilter] = useState<'today' | 'upcoming' | 'all'>('all');
 
   // Shop Settings State
-  const [allowStaffSelection, setAllowStaffSelection] = useState<boolean>(true);
-  const [promptpayNumber, setPromptpayNumber] = useState('0800742005');
-  const [promptpayName, setPromptpayName] = useState('คุณฟรี (Good Cuts Barber)');
-  const [lineOaId, setLineOaId] = useState('@goodcutsbarber');
-  const [lineChannelToken, setLineChannelToken] = useState('');
+  const [promptpayNumber, setPromptpayNumber] = useState('');
+  const [promptpayName, setPromptpayName] = useState('');
+  const [lineOaId, setLineOaId] = useState('');
 
   // Special Holidays
   const [specialHolidayDate, setSpecialHolidayDate] = useState('');
@@ -100,7 +99,6 @@ export default function AdminDashboard() {
   const [holidaysList, setHolidaysList] = useState<DashboardHoliday[]>([]);
 
   // Modals & Notices
-  const [testLineNotice, setTestLineNotice] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffPhone, setNewStaffPhone] = useState('');
 
@@ -129,6 +127,11 @@ export default function AdminDashboard() {
       setShopSlug(data.shop.slug);
       setShopId(data.shop.id);
       setShopRole(data.shop.role);
+      setShopPhone(data.shop.phone);
+      setShopAddress(data.shop.address);
+      setPromptpayNumber(data.shop.promptpayNumber);
+      setPromptpayName(data.shop.promptpayName);
+      setLineOaId(data.shop.lineOaId);
       setServices(data.services);
       setStaffList(data.staff);
       setSchedules(data.schedules);
@@ -218,14 +221,33 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSaveShopProfile = (e: React.FormEvent) => {
+  const handleSaveShopSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShopProfileSaved(true);
-    setTimeout(() => setShopProfileSaved(false), 2000);
+    if (!shopId || shopRole !== 'owner') return;
+
+    setMutatingResourceId('shop-settings');
+    setManagementError('');
+    try {
+      await updateShopSettings(shopId, {
+        name: shopName,
+        phone: shopPhone,
+        address: shopAddress,
+        promptpayNumber,
+        promptpayName,
+        lineOaId,
+      });
+      await loadDashboardBookings(false);
+      setShopSettingsSaved(true);
+      setTimeout(() => setShopSettingsSaved(false), 2000);
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'บันทึกการตั้งค่าร้านค้าไม่สำเร็จ');
+    } finally {
+      setMutatingResourceId(null);
+    }
   };
 
   const handleCopyShopLink = () => {
-    const fullUrl = `http://localhost:3000/book/${shopSlug}`;
+    const fullUrl = `${BOOKING_SITE_URL}/book/${shopSlug}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedLinkNotice(true);
     setTimeout(() => setCopiedLinkNotice(false), 2000);
@@ -411,7 +433,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="font-bold text-base text-white">{shopName} Dashboard</h1>
-              <p className="text-[11px] text-slate-400">{shopSlogan} • โทร: {shopPhone}</p>
+              <p className="text-[11px] text-slate-400">โทร: {shopPhone || '-'}</p>
             </div>
           </div>
 
@@ -940,22 +962,26 @@ export default function AdminDashboard() {
               <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">{managementError}</p>
             )}
             {/* SECTION 1: SHOP PROFILE EDITING */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <form onSubmit={handleSaveShopSettings} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
                     <Store className="w-5 h-5 text-emerald-400" />
                     จัดการข้อมูลอัตลักษณ์ร้านค้า (Shop Profile Settings)
                   </h2>
-                  <p className="text-xs text-slate-400">แก้ไขชื่อร้าน สโลแกน และเบอร์โทรสายตรงสำหรับนำไปแสดงในหน้าจองของลูกค้าและใบนัดหมาย LINE Flex Card</p>
+                  <p className="text-xs text-slate-400">แก้ไขชื่อร้าน เบอร์โทร และที่อยู่สำหรับนำไปแสดงในหน้าจองของลูกค้าและใบนัดหมาย LINE Flex Card</p>
                 </div>
                 <button
-                  onClick={handleSaveShopProfile}
-                  type="button"
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
+                  type="submit"
+                  disabled={shopRole !== 'owner' || mutatingResourceId === 'shop-settings'}
+                  className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
                 >
                   <Save className="w-4 h-4" />
-                  {shopProfileSaved ? 'บันทึกเรียบร้อย!' : 'บันทึกข้อมูลร้านค้า'}
+                  {shopRole !== 'owner'
+                    ? 'เฉพาะเจ้าของร้านแก้ไขได้'
+                    : mutatingResourceId === 'shop-settings'
+                      ? 'กำลังบันทึก...'
+                      : shopSettingsSaved ? 'บันทึกเรียบร้อย!' : 'บันทึกข้อมูลร้านค้า'}
                 </button>
               </div>
 
@@ -965,19 +991,21 @@ export default function AdminDashboard() {
                   <input
                     required
                     type="text"
+                    disabled={shopRole !== 'owner'}
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500 disabled:opacity-60"
                   />
                 </div>
 
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">สโลแกน / คำอธิบายร้านค้า</label>
+                  <label className="text-slate-300 block mb-1 font-semibold">ที่อยู่ร้านค้า</label>
                   <input
                     type="text"
-                    value={shopSlogan}
-                    onChange={(e) => setShopSlogan(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                    disabled={shopRole !== 'owner'}
+                    value={shopAddress}
+                    onChange={(e) => setShopAddress(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
                   />
                 </div>
 
@@ -988,9 +1016,10 @@ export default function AdminDashboard() {
                     <input
                       required
                       type="tel"
+                      disabled={shopRole !== 'owner'}
                       value={shopPhone}
                       onChange={(e) => setShopPhone(e.target.value)}
-                      className="w-full bg-transparent border-none text-emerald-400 font-mono font-bold focus:outline-none ml-0.5"
+                      className="w-full bg-transparent border-none text-emerald-400 font-mono font-bold focus:outline-none ml-0.5 disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -1002,7 +1031,7 @@ export default function AdminDashboard() {
                   <Globe className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   <span className="text-slate-400">ลิงก์หน้าจองออนไลน์ของร้านค้า (Read-only):</span>
                   <span className="font-mono text-emerald-400 font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                    http://localhost:3000/book/{shopSlug}
+                    {BOOKING_SITE_URL}/book/{shopSlug}
                   </span>
                 </div>
                 <button
@@ -1014,7 +1043,7 @@ export default function AdminDashboard() {
                   {copiedLinkNotice ? 'คัดลอกลิงก์แล้ว!' : 'คัดลอกลิงก์ร้านค้า'}
                 </button>
               </div>
-            </div>
+            </form>
 
             {/* SECTION 2: SERVICES MANAGER */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
@@ -1179,30 +1208,35 @@ export default function AdminDashboard() {
 
         {/* TAB 5: PROMPTPAY & LINE OA SETTINGS */}
         {activeTab === 'settings' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Settings className="w-5 h-5 text-emerald-400" />
-                ตั้งค่าช่องทางชำระมัดจำ (PromptPay) & การส่งแจ้งเตือน (LINE OA)
-              </h2>
-              <p className="text-xs text-slate-400">กำหนดเลขบัญชี PromptPay รับเงินมัดจำของร้าน และเชื่อมต่อ LINE Official Account เพื่อส่งข้อความยืนยันคิวให้ลูกค้า</p>
-            </div>
-
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
+          <form
+            onSubmit={handleSaveShopSettings}
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6"
+          >
+            <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
               <div>
-                <p className="font-bold text-xs text-white">โหมดเปิด/ปิดระบบให้ลูกค้าเลือกระบุพนักงาน</p>
-                <p className="text-[11px] text-slate-400">หากปิดไว้ ระบบจะไม่โชว์รายชื่อพนักงานในหน้าจองคิวลูกค้า (เหมาะกับร้านที่ไม่แยกช่าง)</p>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-emerald-400" />
+                  ตั้งค่าช่องทางชำระมัดจำ (PromptPay) & LINE OA
+                </h2>
+                <p className="text-xs text-slate-400">กำหนดเลขบัญชี PromptPay รับเงินมัดจำของร้าน และ LINE OA ID ที่แสดงให้ลูกค้าเห็น</p>
               </div>
               <button
-                type="button"
-                onClick={() => setAllowStaffSelection(!allowStaffSelection)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  allowStaffSelection ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'
-                }`}
+                type="submit"
+                disabled={shopRole !== 'owner' || mutatingResourceId === 'shop-settings'}
+                className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
               >
-                {allowStaffSelection ? 'เปิดให้ลูกค้าเลือกพนักงาน' : 'ปิด (สุ่ม/ไม่ระบุพนักงาน)'}
+                <Save className="w-4 h-4" />
+                {shopRole !== 'owner'
+                  ? 'เฉพาะเจ้าของร้านแก้ไขได้'
+                  : mutatingResourceId === 'shop-settings'
+                    ? 'กำลังบันทึก...'
+                    : shopSettingsSaved ? 'บันทึกเรียบร้อย!' : 'บันทึกการตั้งค่า'}
               </button>
             </div>
+
+            {managementError && (
+              <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">{managementError}</p>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-slate-950 border border-emerald-500/30 rounded-xl p-5 space-y-4">
@@ -1214,33 +1248,32 @@ export default function AdminDashboard() {
                 <div>
                   <label className="text-xs text-slate-300 block mb-1 font-semibold">เลขพร้อมเพย์ร้านค้า *</label>
                   <input
+                    required
                     type="text"
+                    disabled={shopRole !== 'owner'}
                     value={promptpayNumber}
                     onChange={(e) => setPromptpayNumber(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 disabled:opacity-60"
                   />
                 </div>
 
                 <div>
                   <label className="text-xs text-slate-300 block mb-1 font-semibold">ชื่อบัญชีรับโอน *</label>
                   <input
+                    required
                     type="text"
+                    disabled={shopRole !== 'owner'}
                     value={promptpayName}
                     onChange={(e) => setPromptpayName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60"
                   />
                 </div>
               </div>
 
               <div className="bg-slate-950 border border-[#06C755]/30 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5 text-[#06C755]" />
-                    <h3 className="font-bold text-sm text-white">ตั้งค่า LINE Official Account (LINE OA)</h3>
-                  </div>
-                  <span className="text-[10px] bg-[#06C755]/20 text-[#06C755] border border-[#06C755]/30 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> Hybrid Dual-Channel
-                  </span>
+                <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <MessageCircle className="w-5 h-5 text-[#06C755]" />
+                  <h3 className="font-bold text-sm text-white">ตั้งค่า LINE Official Account (LINE OA)</h3>
                 </div>
 
                 <div>
@@ -1250,52 +1283,28 @@ export default function AdminDashboard() {
                   <input
                     type="text"
                     placeholder="เช่น @goodcutsbarber"
+                    disabled={shopRole !== 'owner'}
                     value={lineOaId}
                     onChange={(e) => setLineOaId(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-[#06C755] font-bold focus:outline-none focus:border-[#06C755]"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-[#06C755] font-bold focus:outline-none focus:border-[#06C755] disabled:opacity-60"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    แสดงบนหน้าเว็บร้านค้า และใช้เชื่อมต่อ Custom Messaging API ในอนาคต
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-xs text-slate-300 block mb-1 font-semibold">
-                    Custom Messaging API Channel Token (Optional Advanced Setup)
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="ใส่ Channel Access Token หากต้องการยิงจาก LINE Developers ร้านโดยตรง"
-                    value={lineChannelToken}
-                    onChange={(e) => setLineChannelToken(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-[#06C755]"
-                  />
-                  <p className="text-xs text-rose-400 font-medium mt-1.5 bg-rose-500/10 border border-rose-500/30 p-2.5 rounded-xl leading-relaxed">
-                    ⚠️ หากเว้นว่างไว้ ระบบจะใช้ <strong className="text-rose-300 font-bold underline">LINE กลางของระบบ (@central_booking_oa)</strong> ส่งแจ้งเตือนใบนัดให้อัตโนมัติ (ไม่ต้องตั้งค่าซับซ้อน)
+                    แสดงบนหน้าเว็บร้านค้าเท่านั้น ยังไม่ใช้ส่งข้อความจริง
                   </p>
                 </div>
 
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 text-xs text-slate-300 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-[11px]">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    สถานะปัจจุบัน: พร้อมใช้งานผ่าน LINE กลางของระบบ (ไม่ต้องตั้งค่าเพิ่มเติม)
+                    ตอนนี้ทุกร้านส่งแจ้งเตือนใบนัดผ่าน LINE กลางของระบบ (@central_booking_oa) เท่านั้น
                   </div>
+                  <p className="text-[11px] text-slate-400">
+                    การเชื่อม LINE OA ของร้านตัวเอง (Custom Channel) ยังไม่เปิดใช้งาน — อยู่ระหว่างออกแบบวิธีเก็บ Channel Token ฝั่งเซิร์ฟเวอร์อย่างปลอดภัย จะไม่มีการเก็บ Token ไว้ที่ฝั่งเบราว์เซอร์หรือหน้าเว็บนี้เด็ดขาด
+                  </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTestLineNotice(true);
-                    setTimeout(() => setTestLineNotice(false), 2500);
-                  }}
-                  className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md"
-                >
-                  <Send className="w-4 h-4" />
-                  {testLineNotice ? 'ส่งข้อความทดสอบเข้า LINE เรียบร้อย!' : 'ทดสอบส่งข้อความแจ้งเตือนเข้า LINE OA'}
-                </button>
               </div>
             </div>
-          </div>
+          </form>
         )}
 
         {/* TAB 6: OFFICIAL BILLING & SUBSCRIPTION (UPDATED WITH 5 / 5 / 10 STAFF QUOTAS) */}
