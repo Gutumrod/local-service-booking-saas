@@ -2,7 +2,7 @@
 
 > **โปรเจกต์:** Local Service Booking & LINE Automation SaaS  
 > **ผู้พัฒนาหลัก:** คุณฟรี (CEO) & Antigravity AI Pair Programmer  
-> **สถานะปัจจุบัน:** **Phase A-C (Data Integrity/Authorization Hardening → LINE Webhook Service-Role Fix → Frontend No-Deposit/Fail-Closed Schedule Fixes) เสร็จสมบูรณ์ ผ่านการ verify จริงผ่าน REST API และ apply บน live DB แล้ว (commit ล่าสุด `c8a00e3`, pushed 2026-08-07)** — ดูรายละเอียดที่ [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md) และแผนต่อ [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)  
+> **สถานะปัจจุบัน:** **Phase A-D เสร็จสมบูรณ์ + Phase E1-E3.2 (Owner Auth, Real Bookings Dashboard, Services/Staff, Schedules/Holidays) เสร็จสมบูรณ์ ผ่านการ verify จริงผ่าน REST API + browser และ apply บน live DB แล้วทุกจุด (commit ล่าสุด `8bd6a45`, pushed 2026-08-08)** — เหลือ **E3.3 (Shop Settings + ปิดช่องโหว่ `shops` table เปิด column ภายในให้ anon อ่านได้)** กำลังทำอยู่ — ดูรายละเอียดที่ [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md) และแผนต่อ [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)  
 > **Supabase Live Project:** `https://gyleqrjdzwwlqierdwcy.supabase.co` (`local_service` schema)  
 > **GitHub Repository:** [`https://github.com/Gutumrod/local-service-booking-saas`](https://github.com/Gutumrod/local-service-booking-saas)
 
@@ -53,7 +53,14 @@ D:\AI-Workspace\projects\local-service-booking-saas
    - หน้า `/book/[slug]` ฝั่งลูกค้า **เชื่อมและทดสอบ end-to-end จริงแล้ว** (จอง → ล็อกสล็อต → อัปโหลดสลิปเข้า Supabase Storage จริง → ยืนยัน)
    - **Phase C:** บริการไม่มีมัดจำ (`status=confirmed, deposit_status=not_required`) ข้ามหน้าอัปโหลดสลิปไปหน้ายืนยันคิวทันที ไม่บังคับ QR/สลิปอีกต่อไป
    - **Phase C:** พนักงานที่ไม่มีแถว `staff_schedules` ของวันนั้นถือว่า **ไม่ว่าง** (fail-closed) ทั้ง RPC `create_booking_hold` และ frontend availability check — เดิมเป็น fail-open (ถือว่าว่างเสมอ) เป็นบั๊กที่แก้แล้ว บันทึกกฎไว้ใน [`PRODUCT_RULES_V1.md`](PRODUCT_RULES_V1.md) ข้อ 3.5
-   - **หน้า `/dashboard` ฝั่งร้านค้า ยังไม่เชื่อม backend เลย** — ยังใช้ mock data (`INITIAL_BOOKINGS`) `apps/booking-admin/src/lib/admin-service.ts` มีฟังก์ชันครบแล้วแต่ไม่ถูก import ใช้ที่ไหน ต้องรอ **Phase E** (ต้องออกแบบ auth flow ให้ shop owner ก่อน)
+5. ✅ **หน้า `/dashboard` ฝั่งร้านค้า — Phase E1-E3.2 เชื่อม backend จริงแล้ว (ยกเว้น settings/billing ที่ยังรอ E3.3-E4):**
+   - **E1 — Owner Auth:** Supabase Auth email/password จริง, `/login`, `/auth/callback` (รองรับทั้ง PKCE และ email OTP confirm), dashboard guard เช็ค session + `shop_users` membership จริงฝั่ง server, logout — `/register` สร้างบัญชี Auth จริง + เรียก RPC `provision_owner_shop` (atomic, idempotency-keyed, กัน 1 account เป็นเจ้าของได้แค่ 1 ร้าน)
+   - **E2 — Bookings Tab:** ลบ `INITIAL_BOOKINGS` mock, โหลดคิวจริงตาม shop ของผู้ใช้ที่ login, approve/reject/cancel ผ่าน RPC ที่เช็ค `is_shop_member` + row lock (`FOR UPDATE`) ทั้งหมด ไม่ใช่ raw `.update()` เหมือนเดิม — ยกเลิกบังคับระบุเหตุผลจริง ไม่ auto-mark มัดจำเป็น refunded (ร้านต้องคืนเงินเองแล้วบันทึกย้อนหลังตาม V1 ข้อ 4.4)
+   - **E3.1 — Services & Staff:** เพิ่ม `has_shop_role()`/`is_shop_owner()`, RPC จัดการบริการ (owner/admin) และพนักงาน (owner เท่านั้น) ตรงตาม role matrix ใน V1 ข้อ 7, soft-disable ผ่าน `is_active` (services มี booking FK แบบ `ON DELETE RESTRICT` ลบจริงไม่ได้)
+   - **E3.2 — Schedules & Holidays:** RPC บันทึกตารางพนักงาน 7 วันแบบ atomic (ตรวจวันซ้ำ/เวลา/break) + RPC จัดการวันหยุดร้าน (idempotency-keyed) — owner/admin แก้ได้, staff อ่านอย่างเดียว (ยังไม่มี column เชื่อม `auth user` กับ `staff.id` จึงพิสูจน์ "ตัวเอง" ของ staff ไม่ได้ — deferred)
+   - **ทุก checkpoint ปิดช่องโหว่เดียวกัน:** table เดิมมี `GRANT ALL`/policy `FOR ALL USING (is_shop_member(...))` ที่ไม่แยก role เลย แปลว่า **staff ธรรมดาเขียนตรงเข้าตารางได้มาตลอด** ก่อนหน้านี้ — ทุก RPC ใหม่ revoke direct write จาก `authenticated` แล้วบังคับผ่าน RPC ที่เช็ค role จริง
+   - **เหลือ E3.3 (Shop Settings):** กำลังทำ — พบช่องโหว่เพิ่ม: `shops` table เปิดให้ anon `select *` ได้ทุกคอลัมน์รวม `subscription_status`, `trial_ends_at`, `owner_name` (ยืนยันจริงผ่าน REST แล้ว) ต้องปิดพร้อมกับตัด LINE Channel Token ออกจาก client
+   - **E4 (Billing/Stripe) ยังไม่เริ่ม** — services/staff/schedules ทำก่อนตามลำดับความเสี่ยง
 
 ---
 
@@ -62,15 +69,15 @@ D:\AI-Workspace\projects\local-service-booking-saas
 - 📄 **Master Spec & Rules:** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
 - 🛠️ **แผนงาน Phase A-E:** [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)
 
-## 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`) — ⚠️ ยังเป็น mock, ไม่ได้เชื่อม backend
+## 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`) — เชื่อม backend จริงแล้ว 4/6 แท็บ
 
-- 6 แท็บการทำงาน (UI ล็อกดีไซน์แล้ว แต่ข้อมูลยังเป็น mock ทั้งหมด):
-  1. `bookings`: ตารางคิวงาน ฟอนต์ใหญ่ อ่านง่าย มีปุ่ม `ยกเลิกคิว` และป๊อบอัพตรวจสลิปมัดจำมีปุ่ม X/ปิดหน้าต่าง
-  2. `schedules`: จัดการเวลาเปิด-ปิด ตารางเวลาพนักงานแบบ 3 คอลัมน์จัตุรัส และฟอร์มวันหยุดพิเศษแบบ Split View
-  3. `staff`: เพิ่ม/ลบพนักงาน ปรับสถานะการทำงาน
-  4. `services`: เพิ่ม/แก้ไขบริการ ราคา ยอดมัดจำ ระยะเวลา
-  5. `settings`: ตั้งค่า PromptPay, โลโก้ร้าน, และเลือกสลับ **LINE กลางของระบบ (@central_booking_oa)** หรือ LINE ร้านค้า
-  6. `billing`: ดูโควตาคิวจอง ประวัติแพ็กเกจ และปุ่มอัปเกรดผูกลิงก์ไปหน้า `/register`
+- สถานะ 6 แท็บ (อัปเดต 2026-08-08 หลัง E3.2):
+  1. `bookings` ✅ **จริง (E2):** โหลดคิวจริงตาม shop ของผู้ login, approve/reject/cancel ผ่าน RPC, loading/error/empty state, ป้องกันกดซ้ำระหว่าง mutation
+  2. `staff` ✅ **จริง (E3.1):** เพิ่ม/เปิด-ปิดพนักงานผ่าน RPC (owner เท่านั้น), soft-disable ไม่ลบจริง
+  3. `services` ✅ **จริง (E3.1):** เพิ่ม/แก้/ปิดบริการผ่าน RPC (owner/admin), soft-disable ผ่าน `is_active`
+  4. `schedules` ✅ **จริง (E3.2):** ตารางพนักงาน 7 วัน + วันหยุดร้าน โหลด/บันทึกจริงผ่าน RPC แบบ atomic (owner/admin), ตัด state "เวลาเปิดร้านรวม" ที่ไม่มี backend column ออกแล้ว
+  5. `settings` ⬜ **ยัง mock — กำลังทำ E3.3:** ตั้งค่า PromptPay/LINE OA ID ยังไม่เชื่อม RPC, มีช่อง Custom LINE Channel Token ที่ต้องถอดออกก่อน (client secret risk)
+  6. `billing` ⬜ **ยัง mock — รอ E4:** ดูโควตาคิวจอง ประวัติแพ็กเกจ และปุ่มอัปเกรดผูกลิงก์ไปหน้า `/register` (ยังไม่เชื่อม Stripe)
 
 ### 🟢 3.3 หน้าสมัครสมาชิกร้านค้าใหม่ (`apps/booking-admin/src/app/register/page.tsx`)
 - **4-Step Onboarding Wizard:** ข้อมูลร้านค้า ➔ เลือกแพ็กเกจ (ผูก query string `?plan=...`) ➔ ตั้งค่า PromptPay ➔ สำเร็จ
@@ -99,22 +106,28 @@ D:\AI-Workspace\projects\local-service-booking-saas
 
 ## 5. แผนการดำเนินงานต่อ (Roadmap & Next Steps)
 
-Phase A-D เสร็จแล้ว เหลือ Phase E ตาม [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md) — **ห้ามข้ามลำดับเฟส** แต่ละเฟสต้อง verify DoD ผ่าน REST API จริงก่อนเริ่มเฟสถัดไป:
+Phase A-D เสร็จแล้ว, Phase E แตกเป็น checkpoint ย่อย (E1, E2, E3.1-E3.3, E4) ตาม [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md) — **ห้ามข้ามลำดับ** แต่ละ checkpoint ต้อง verify ผ่าน REST API จริง (+ browser สำหรับ UI) ก่อนเริ่ม checkpoint ถัดไป:
 
-- ✅ **Phase B:** แก้ LINE webhook ให้ใช้ `SUPABASE_SERVICE_ROLE_KEY` ผ่าน server-only admin client — เสร็จ, verify ด้วย signed webhook POST จริง, commit `370473f`
-- ✅ **Phase C:** แก้ frontend no-deposit flow + fail-closed staff schedule — เสร็จ, verify ผ่าน REST + browser จริง, commit `c8a00e3`
-- ✅ **Phase D:** เอกสารขั้นตอน manual "Exposed schemas" กันเจอ `406 PGRST106` ซ้ำตอน deploy ใหม่ — อยู่ใน README.md (หัวข้อ "Required manual step on any fresh Supabase project") และหัวข้อ 6 ด้านล่างของไฟล์นี้
-- ⬜ **Phase E:** ต่อ `/dashboard` เข้า backend จริง — ต้องออกแบบ auth flow ให้ shop owner ก่อนเริ่ม (งานใหญ่สุด แยกคุยขอบเขตต่างหาก)
+- ✅ **Phase B:** แก้ LINE webhook ให้ใช้ `SUPABASE_SERVICE_ROLE_KEY` ผ่าน server-only admin client — commit `370473f`
+- ✅ **Phase C:** แก้ frontend no-deposit flow + fail-closed staff schedule — commit `c8a00e3`
+- ✅ **Phase D:** เอกสารขั้นตอน manual "Exposed schemas" กันเจอ `406 PGRST106` ซ้ำตอน deploy ใหม่
+- ✅ **Phase E1:** Owner auth (Supabase Auth email/password + atomic shop provisioning RPC) — commit `a42ec09`
+- ✅ **Phase E2:** Bookings tab เชื่อมจริง + approve/reject/cancel RPC — commit `38058a6`
+- ✅ **Phase E3.1:** Services & Staff management RPC + role authorization — commit `bd761fe`
+- ✅ **Phase E3.2:** Schedules & Holidays RPC + role authorization — commit `8bd6a45`
+- 🔶 **Phase E3.3 (กำลังทำ):** Shop Settings จริง + ตัด LINE Channel Token ออกจาก client + ปิดช่องโหว่ `shops` table เปิด column ภายในให้ anon อ่านได้
+- ⬜ **Phase E4:** เชื่อม Stripe Billing/Checkout/Portal จริง (ยังไม่เริ่ม)
 
 เมื่อเปิดแชทใหม่ ให้บอก AI Agent ในแชทใหม่ดังนี้:
 
 ```text
 "สวัสดีครับ ผมต้องการลุยโปรเจกต์ Local Service Booking SaaS ต่อ
 โปรดอ่านไฟล์ PRODUCT_RULES_V1.md, PROJECT_HANDOVER_BRIEF.md,
-docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md และ
-docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md ในคลังไฟล์
+docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md ในคลังไฟล์
 
-Phase A-D เสร็จแล้ว ต่อ Phase E (เชื่อม /dashboard เข้า backend จริง — ต้องตัดสินใจ auth flow ก่อนเริ่ม) ตามบรีฟ Phase A-E"
+Phase A-D และ E1-E3.2 เสร็จแล้ว ต่อ Phase E3.3 (Shop Settings จริง + ตัด LINE
+Channel Token ออกจาก client + ปิดช่องโหว่ shops table เปิด column ภายในให้ anon
+อ่านได้) ตามบรีฟ Phase A-E"
 ```
 
 ## 6. ⚠️ ขั้นตอน Manual ที่ทำอัตโนมัติไม่ได้ (ต้องทำเองทุกครั้งที่ deploy โปรเจกต์ใหม่)

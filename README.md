@@ -10,13 +10,13 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 ---
 
-## 🟢 Status: Phase 1 Backend Integration + Phase A Hardening Complete (2026-08-07)
+## 🟢 Status: Phase A-D Complete + Phase E1-E3.2 Complete (2026-08-08)
 
 - ✅ **Supabase PostgreSQL Database Engine (`local_service` schema):** All migrations under `supabase/migrations/` applied and verified against the live project `gyleqrjdzwwlqierdwcy`. Atomic slot lock RPC `create_booking_hold` with 15-minute countdown, non-confusing booking code generator (`BK-XXXXXX`), 2-axis status audit triggers, and a real Postgres exclusion constraint (`prevent_overlapping_staff_bookings`) verified under concurrent load — see [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md).
-- ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):** Endpoint implemented with HMAC-SHA256 signature verification, parsing `ผูกคิว {booking_code}-{link_token}` commands, binding `line_users` in Supabase, and replying with custom LINE Flex Cards. **Currently non-functional against RLS with the anon key** — needs the service_role fix in Phase B (not started).
+- ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):** Uses a server-only `SUPABASE_SERVICE_ROLE_KEY` admin client (Phase B) instead of the anon key RLS used to block silently. HMAC-SHA256 signature verification with `crypto.timingSafeEqual`, parses `ผูกคิว {booking_code}-{link_token}` commands, binds `line_users`, replies with LINE Flex Cards, and reports real per-event failures instead of a blanket `success:true`.
 - ✅ **Single Shared Environment Configuration (`.env.local`):** Master configuration at workspace root (`.env.local`) hardlinked to both `apps/booking-consumer` and `apps/booking-admin`.
-- ✅ **Consumer booking flow (`/book/[slug]`):** Connected to live Supabase backend and manually verified end-to-end (hold → deposit slip upload to Storage → status transitions).
-- ⚠️ **Shop owner dashboard (`/dashboard`) is NOT connected to the backend.** It still renders hardcoded mock data (`INITIAL_BOOKINGS`); `apps/booking-admin/src/lib/admin-service.ts` exists with the right functions but is not imported anywhere yet. See Phase E in [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md).
+- ✅ **Consumer booking flow (`/book/[slug]`):** Connected to live Supabase backend and manually verified end-to-end (hold → deposit slip upload to Storage → status transitions), with fail-closed staff scheduling and a proper no-deposit success path (Phase C).
+- ✅ **Shop owner dashboard (`/dashboard`) — real Supabase Auth login + 4 of 6 tabs wired to live data.** Owners/admins/staff sign in via Supabase Auth (`/login`), `/register` provisions a real shop + owner membership atomically. Bookings, Services, Staff, and Schedules/Holidays tabs load and mutate real tenant-scoped data through role-checked RPCs (owner/admin/staff enforced per `PRODUCT_RULES_V1.md` §7). Settings and Billing tabs remain mock, tracked as Phase E3.3/E4 in [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md).
 
 ---
 
