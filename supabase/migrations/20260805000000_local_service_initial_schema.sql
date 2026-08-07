@@ -122,10 +122,10 @@ CREATE POLICY "Public services viewable by everyone" ON local_service.services F
 CREATE POLICY "Public staff viewable by everyone" ON local_service.staff FOR SELECT USING (is_active = true);
 
 -- RLS: Authenticated Shop Members Full Control
-CREATE POLICY "Members manage shop services" ON local_service.services ALL USING (local_service.is_shop_member(shop_id));
-CREATE POLICY "Members manage shop staff" ON local_service.staff ALL USING (local_service.is_shop_member(shop_id));
-CREATE POLICY "Members view customers" ON local_service.customers ALL USING (local_service.is_shop_member(shop_id));
-CREATE POLICY "Members view bookings" ON local_service.bookings ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members manage shop services" ON local_service.services FOR ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members manage shop staff" ON local_service.staff FOR ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members view customers" ON local_service.customers FOR ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members view bookings" ON local_service.bookings FOR ALL USING (local_service.is_shop_member(shop_id));
 
 -- RLS: Public Customer Booking Creation
 CREATE POLICY "Public customers insert" ON local_service.customers FOR INSERT WITH CHECK (true);

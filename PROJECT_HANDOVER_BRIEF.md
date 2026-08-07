@@ -1,9 +1,10 @@
-# 🚀 Project Executive Brief & Session Handoff (สำหรับเริ่มแชทใหม่)
+# 🚀 Project Executive Brief & Session Handoff
 
 > **โปรเจกต์:** Local Service Booking & LINE Automation SaaS  
 > **ผู้พัฒนาหลัก:** คุณฟรี (CEO) & Antigravity AI Pair Programmer  
-> **สถานะปัจจุบัน:** Phase 0 (UI/UX Frontend Prototype 100% Lock) ➔ **พร้อมเริ่ม Phase 1 Backend Immediately**  
-> **GitHub Repository:** [`https://github.com/Gutumrod/local-service-booking-saas`](https://github.com/Gutumrod/local-service-booking-saas) (Latest Commit: `0cc1e88`)
+> **สถานะปัจจุบัน:** **Phase 1 Backend Integration & LINE OA Webhook Gateway (100% Complete & Verified)**  
+> **Supabase Live Project:** `https://gyleqrjdzwwlqierdwcy.supabase.co` (`local_service` schema)  
+> **GitHub Repository:** [`https://github.com/Gutumrod/local-service-booking-saas`](https://github.com/Gutumrod/local-service-booking-saas)
 
 ---
 
@@ -23,32 +24,38 @@
 ```
 D:\AI-Workspace\projects\local-service-booking-saas
 ├── apps/
-│   ├── booking-consumer/       # Next.js 16 (Port 3000) -> หน้าจองคิวฝั่งลูกค้า /book/[slug]
+│   ├── booking-consumer/       # Next.js 16 (Port 3000) -> หน้าจองคิวฝั่งลูกค้า /book/[slug] + LINE Webhook /api/line/webhook
 │   └── booking-admin/          # Next.js 16 (Port 3001) -> หน้าหลังบ้าน /dashboard, /register, /platform-admin, /forgot-password
-├── docs/                       # เอกสารสเปกทางเทคนิค การเงิน และสถาปัตยกรรมระบบ
-│   ├── technical/
-│   └── business/
+├── supabase/                   # Migration SQL files (local_service schema)
+├── .env.local                  # Single Shared Environment Configuration (Hardlinked to both apps)
 ├── PRODUCT_RULES_V1.md         # เอกสารกฎการออกแบบและสเปกระบบฉบับสมบูรณ์ (Master Spec)
 └── README.md                   # ดัชนีภาพรวมโปรเจกต์
 ```
 
 ---
 
-## 3. สรุปความพร้อมของ 4 หน้าหลักที่ล็อกดีไซน์สมบูรณ์ 100%
+## 3. สรุปผลงานที่เสร็จสิ้นใน Phase 1 Backend Integration (100% Verified)
 
-### 🟢 3.1 หน้าจองฝั่งลูกค้า (`apps/booking-consumer/src/app/book/[slug]/page.tsx`)
-- **Step 1 (เลือกบริการ/ช่าง):** แสดงรายการบริการ ระยะเวลา ราคา ยอดมัดจำ และเลือกพนักงาน
-- **Step 2 (เลือกรอบเวลา):** เลือกระบุวันที่ นัดหมายเวลา ล็อกสล็อต 15 นาที
-- **Step 3 (มัดจำ PromptPay & ยืนยัน):**
-  - แสดง **PromptPay Dynamic QR Code** (ดึงจาก `promptpay.io`) พร้อมปุ่มกด **`บันทึกรูป QR Code`** ดาวน์โหลดไฟล์ภาพ `.png` ลงเครื่องจริง 100%
-  - **15-Min Expired Timer:** นับเวลาถอยหลัง 15 นาที หากหมดอายุ (`00:00`) จะแสดงแถบสีแดงแจ้งเตือน ปิดใช้งานปุ่มยืนยันจอง และมีปุ่ม **`🔄 เลือกรอบเวลาใหม่`** ให้กดเริ่มเลือกเวลาใหม่ใน 1 คลิก
+1. ✅ **Supabase PostgreSQL Engine (`local_service` schema):**
+   - รัน SQL Migrations ทั้ง 4 ไฟล์ลงบน Supabase Project `gyleqrjdzwwlqierdwcy`
+   - รัน RPC `create_booking_hold` บน DB ล็อกสล็อตเวลา 15 นาทีอัตโนมัติ ออกรหัสจอง `BK-XXXXXX` และ Link Token ป้องกันคิวชนด้วย Exclusion Constraint
+   - Seed ข้อมูลร้านค้าตัวอย่าง **Good Cuts Barber** (`slug: good-cuts-barber`) พร้อมบริการและช่างเรียบร้อย
+2. ✅ **Single Shared Environment Configuration (`.env.local`):**
+   - สร้างไฟล์ `.env.local` ตัวหลักที่ root directory และทำ Hardlink เชื่อมตรงไปยังทั้ง 2 apps
+   - รองรับการตั้งค่า `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_CENTRAL_LINE_OA_ID`, `LINE_CHANNEL_SECRET` และ `LINE_CHANNEL_ACCESS_TOKEN` ในจุดเดียว
+3. ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):**
+   - พัฒนา Webhook endpoint บน Next.js API Routes สำหรับตรวจสอบ HMAC-SHA256 Signatures
+   - ถอดรหัสคำสั่ง `ผูกคิว {booking_code}-{link_token}` และบันทึกผูกตัวตน `line_users` ใน Supabase
+   - สร้างและส่ง **LINE Flex Card** แจ้งเตือนใบนัดหมายตอบกลับไปยังลูกค้าอัตโนมัติ
+4. ✅ **เชื่อมต่อ Frontend เข้ากับ Backend:**
+   - หน้า `/book/[slug]` ฝั่งลูกค้า และหน้า `/dashboard` ฝั่งร้านค้า ดึงข้อมูลและอัปเดตสถานะผ่าน Supabase PostgreSQL จริง
 
-### 🟢 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`)
-- **6 แท็บการทำงาน:**
-  1. `bookings`: ตารางคิวงาน ฟอนต์ใหญ่ อ่านง่าย มีปุ่ม `ยกเลิกคิว` และป๊อบอัพตรวจสลิปมัดจำมีปุ่ม X/ปิดหน้าต่าง
-  2. `schedules`: จัดการเวลาเปิด-ปิด ตารางเวลาพนักงานแบบ 3 คอลัมน์จัตุรัส และฟอร์มวันหยุดพิเศษแบบ Split View
-  3. `staff`: เพิ่ม/ลบพนักงาน ปรับสถานะการทำงาน
-  4. `services`: เพิ่ม/แก้ไขบริการ ราคา ยอดมัดจำ ระยะเวลา
+---
+
+### 📌 เอกสารอ้างอิงสำคัญในโปรเจกต์
+- 🏠 **Project README:** [`README.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/README.md)
+- 📄 **Master Spec & Rules:** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
+��บริการ ราคา ยอดมัดจำ ระยะเวลา
   5. `settings`: ตั้งค่า PromptPay, โลโก้ร้าน, และเลือกสลับ **LINE กลางของระบบ (@central_booking_oa)** หรือ LINE ร้านค้า
   6. `billing`: ดูโควตาคิวจอง ประวัติแพ็กเกจ และปุ่มอัปเกรดผูกลิงก์ไปหน้า `/register`
 

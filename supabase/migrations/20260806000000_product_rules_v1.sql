@@ -445,8 +445,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 12. RLS POLICIES FOR SECURITY
 ALTER TABLE local_service.booking_status_history ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Members view status history" 
-ON local_service.booking_status_history ALL 
+CREATE POLICY "Members view status history"
+ON local_service.booking_status_history FOR ALL
 USING (local_service.is_shop_member((SELECT shop_id FROM local_service.bookings WHERE id = booking_id)));
 
 -- Grant schema permissions

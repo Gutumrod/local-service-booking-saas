@@ -3,10 +3,19 @@
 > **Official GitHub Repository:** [https://github.com/Gutumrod/local-service-booking-saas](https://github.com/Gutumrod/local-service-booking-saas)  
 > **Live Supabase Project URL:** `https://gyleqrjdzwwlqierdwcy.supabase.co`  
 > **Master Product Specification (SSOT):** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)  
-> **Phase 1 Implementation Brief:** [`docs/technical/BRIEF_PHASE1_AGY.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE1_AGY.md)  
+> **Phase 1 Backend Integration Brief:** [`docs/technical/BRIEF_PHASE1_AGY.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE1_AGY.md)  
 > **Official Business Model:** [`docs/business/OFFICIAL_BUSINESS_MODEL.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/business/OFFICIAL_BUSINESS_MODEL.md)
 
 Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service Businesses (Barbershops, Salons, Clinics, Spas, Auto Detailing, etc.) built for solopreneur speed, zero-friction onboarding, and 100% self-service subscription monetization.
+
+---
+
+## 🟢 Status: Phase 1 Backend Integration Complete (2026-08-07)
+
+- ✅ **Supabase PostgreSQL Database Engine (`local_service` schema):** 4 Migrations applied to active project `gyleqrjdzwwlqierdwcy`. Atomic slot lock RPC `create_booking_hold` with 15-minute countdown, non-confusing booking code generator (`BK-XXXXXX`), and 2-axis status audit triggers.
+- ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):** Fully functional LINE Webhook Gateway with HMAC-SHA256 signature verification, parsing `ผูกคิว {booking_code}-{link_token}` commands, binding `line_users` in Supabase, and replying with custom LINE Flex Cards.
+- ✅ **Single Shared Environment Configuration (`.env.local`):** Master configuration at workspace root (`.env.local`) hardlinked to both `apps/booking-consumer` and `apps/booking-admin`.
+- ✅ **Frontend App Integration:** Connected `/book/[slug]` and `/dashboard` to live Supabase backend services.
 
 ---
 
@@ -33,7 +42,7 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 ## 🛠️ Architecture
 
-- **Consumer Web App (`apps/booking-consumer`):** Mobile-first customer booking portal (`/book/[slug]`) + LINE messaging auto-link binding.
+- **Consumer Web App (`apps/booking-consumer`):** Mobile-first customer booking portal (`/book/[slug]`) + LINE messaging auto-link binding + LINE Webhook Gateway (`/api/line/webhook`).
 - **Store Owner Dashboard (`apps/booking-admin`):** Admin panel (`/dashboard`) for managing bookings, staff schedules, deposit verification, and billing.
 - **Platform Super Admin Panel (`apps/booking-admin/src/app/platform-admin`):** CEO Control Center (`/platform-admin`) for managing tenant shops, MRR analytics, subscription overrides, shop cancellation controls, and Central LINE OA traffic monitoring.
 - **Database & Auth (`supabase/`):** Multi-tenant PostgreSQL database (`https://gyleqrjdzwwlqierdwcy.supabase.co`) with Row-Level Security (RLS), Postgres Range Exclusion Constraints, and custom RPCs.

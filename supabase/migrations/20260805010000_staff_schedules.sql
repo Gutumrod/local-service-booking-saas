@@ -38,5 +38,5 @@ ALTER TABLE local_service.shop_holidays ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public staff schedules viewable by everyone" ON local_service.staff_schedules FOR SELECT USING (true);
 CREATE POLICY "Public shop holidays viewable by everyone" ON local_service.shop_holidays FOR SELECT USING (true);
 
-CREATE POLICY "Members manage staff schedules" ON local_service.staff_schedules ALL USING (local_service.is_shop_member(shop_id));
-CREATE POLICY "Members manage shop holidays" ON local_service.shop_holidays ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members manage staff schedules" ON local_service.staff_schedules FOR ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members manage shop holidays" ON local_service.shop_holidays FOR ALL USING (local_service.is_shop_member(shop_id));

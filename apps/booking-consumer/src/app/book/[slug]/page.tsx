@@ -5,62 +5,34 @@ import { useParams } from 'next/navigation';
 import { 
   Calendar, Clock, User, CheckCircle2, QrCode, Upload, ShieldCheck, 
   ChevronRight, Sparkles, MessageCircle, AlertTriangle, Coffee, CalendarOff,
-  Copy, Download, Check, ShieldAlert, Send, PhoneCall, Phone, RefreshCw
+  Copy, Download, Check, ShieldAlert, Send, PhoneCall, Phone, RefreshCw, Loader2
 } from 'lucide-react';
-import { createCustomerBookingFlex } from '../../../lib/line-flex';
+import {
+  getShopBySlug, getShopServices, getShopStaff, getShopAvailability, createBookingHold,
+  submitDepositSlip, uploadDepositSlip, Shop, Service, Staff, HoldResponse,
+  StaffSchedule, ShopHoliday,
+} from '../../../lib/booking-service';
 
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  deposit: number;
-}
+const CENTRAL_LINE_OA_ID = process.env.NEXT_PUBLIC_CENTRAL_LINE_OA_ID || 'central_booking_oa';
 
-interface Staff {
-  id: string;
-  name: string;
-  nickname: string;
-  weeklyOffDays: number[];
-  breakStart: string;
-  breakEnd: string;
-}
-
-const DEMO_SERVICES: Service[] = [
-  { id: '1', name: 'ตัดผมชายพรีเมียม + สระเซ็ต (Signature Haircut)', description: 'บริการตัดแต่งทรงผมอย่างประณีต พร้อมสระนวดผ่อนคลายและจัดทรงด้วยผลิตภัณฑ์นำเข้า', duration: 45, price: 350, deposit: 100 },
-  { id: '2', name: 'ดัดวอลลุ่มสไตล์เกาหลี (Korean Down Perm)', description: 'กดผมด้านข้าง ล็อกทรงวอลลุ่มธรรมชาติ ดูแลเส้นผมด้วยทรีตเมนต์บำรุง', duration: 90, price: 1200, deposit: 300 },
-  { id: '3', name: 'ทำสีผมพรีเมียม (Premium Hair Color)', description: 'ทำสีผมแฟชั่น/ปกปิดผมขาว พร้อมทรีตเมนต์เคลือบเงาป้องกันผมเสีย', duration: 120, price: 1800, deposit: 500 },
-  { id: '4', name: 'สปาหนังศีรษะแบบล้ำลึก (Deep Scalp Treatment)', description: 'ดีท็อกซ์หนังศีรษะ ขจัดความมันและรังแค พร้อมนวดผ่อนคลายความเครียด', duration: 60, price: 790, deposit: 200 }
-];
-
-const DEMO_STAFF: Staff[] = [
-  { id: 'stany', name: 'ไม่ระบุพนักงาน (พนักงานคนไหนก็ได้ที่ว่าง)', nickname: 'ไม่ระบุพนักงาน (สุ่มพนักงานที่ว่าง)', weeklyOffDays: [], breakStart: '12:00', breakEnd: '13:00' },
-  { id: 'st1', name: 'ช่างเอก (Master Stylist)', nickname: 'ช่างเอก', weeklyOffDays: [1], breakStart: '12:00', breakEnd: '13:00' },
-  { id: 'st2', name: 'ช่างตั้ม (Fade Specialist)', nickname: 'ช่างตั้ม', weeklyOffDays: [2], breakStart: '13:00', breakEnd: '14:00' },
-  { id: 'st3', name: 'ช่างบิว (Color Expert)', nickname: 'ช่างบิว', weeklyOffDays: [3], breakStart: '14:00', breakEnd: '15:00' }
-];
-
-const SPECIAL_HOLIDAYS = [
-  { date: '2026-08-12', reason: 'วันแม่แห่งชาติ (ร้านปิดทำการประจำปี)' }
-];
-
-const SLOT_STATUS_MAP: Record<string, boolean> = {
-  '10:30': true,
-  '14:30': true
-};
-
-const ALL_TIME_SLOTS = ['09:30', '10:30', '11:30', '12:30', '13:30', '14:30', '15:30', '16:30', '17:30', '18:30'];
+const ALL_TIME_SLOTS = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00'];
 
 export default function BookingPage() {
   const params = useParams();
-  const slug = params?.slug as string || 'good-cuts-barber';
+  const slug = (params?.slug as string) || 'good-cuts-barber';
+
+  const [shop, setShop] = useState<Shop | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [staffSchedules, setStaffSchedules] = useState<StaffSchedule[]>([]);
+  const [shopHolidays, setShopHolidays] = useState<ShopHoliday[]>([]);
+  const [isLoadingShop, setIsLoadingShop] = useState(true);
 
   const [step, setStep] = useState<number>(1);
-  const [selectedService, setSelectedService] = useState<Service | null>(DEMO_SERVICES[0]);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(DEMO_STAFF[0]);
-  const [selectedDate, setSelectedDate] = useState<string>('2026-08-05');
-  const [selectedTime, setSelectedTime] = useState<string>('11:30');
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedTime, setSelectedTime] = useState<string>('11:00');
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -70,9 +42,40 @@ export default function BookingPage() {
   const [savedQrNotice, setSavedQrNotice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [holdResult, setHoldResult] = useState<HoldResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 15-Minute Countdown Timer (900 seconds)
   const [timeLeft, setTimeLeft] = useState<number>(900);
+
+  // Fetch shop, services, staff from Supabase
+  useEffect(() => {
+    async function loadData() {
+      setIsLoadingShop(true);
+      const shopData = await getShopBySlug(slug);
+      if (shopData) {
+        setShop(shopData);
+        const [servicesData, staffData, availabilityData] = await Promise.all([
+          getShopServices(shopData.id),
+          getShopStaff(shopData.id),
+          getShopAvailability(shopData.id),
+        ]);
+        setServices(servicesData);
+        setStaffList(staffData);
+        setStaffSchedules(availabilityData.schedules);
+        setShopHolidays(availabilityData.holidays);
+        if (servicesData.length > 0) setSelectedService(servicesData[0]);
+      }
+      setIsLoadingShop(false);
+    }
+    loadData();
+  }, [slug]);
+
+  useEffect(() => {
+    return () => {
+      if (slipPreview) URL.revokeObjectURL(slipPreview);
+    };
+  }, [slipPreview]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -90,10 +93,9 @@ export default function BookingPage() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const shopPhone = '081-234-5678';
-  const promptpayNumber = '0800742005';
-  const lineOaUrl = 'https://line.me/R/ti/p/@goodcutsbarber';
-  const bookingCode = 'BK-1042';
+  const promptpayNumber = shop?.promptpay_number || '0812345678';
+  const promptpayName = shop?.promptpay_name || shop?.name || 'ร้านค้าบริการ';
+  const shopPhone = shop?.phone || '081-234-5678';
 
   const handleCopyPromptpay = () => {
     navigator.clipboard.writeText(promptpayNumber.replace(/-/g, ''));
@@ -102,10 +104,11 @@ export default function BookingPage() {
   };
 
   const handleSaveQr = () => {
-    const qrUrl = `https://promptpay.io/${promptpayNumber.replace(/[^0-9]/g, '')}/${selectedService?.deposit || 100}.png`;
+    const depositAmount = selectedService?.deposit_amount ?? shop?.default_deposit_amount ?? 100;
+    const qrUrl = `https://promptpay.io/${promptpayNumber.replace(/[^0-9]/g, '')}/${depositAmount}.png`;
     const link = document.createElement('a');
     link.href = qrUrl;
-    link.download = `PromptPay-QR-Deposit-${selectedService?.deposit || 100}THB.png`;
+    link.download = `PromptPay-QR-Deposit-${depositAmount}THB.png`;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
@@ -114,38 +117,92 @@ export default function BookingPage() {
     setTimeout(() => setSavedQrNotice(false), 2000);
   };
 
-  const dayOfWeek = useMemo(() => {
-    if (!selectedDate) return 0;
-    return new Date(selectedDate).getDay();
-  }, [selectedDate]);
-
-  const isSpecialShopHoliday = useMemo(() => {
-    return SPECIAL_HOLIDAYS.find(h => h.date === selectedDate);
-  }, [selectedDate]);
-
-  const isStaffWeeklyOff = useMemo(() => {
-    if (!selectedStaff || selectedStaff.id === 'stany') return false;
-    return selectedStaff.weeklyOffDays.includes(dayOfWeek);
-  }, [selectedStaff, dayOfWeek]);
-
   const availableTimeSlots = useMemo(() => {
-    if (isSpecialShopHoliday || isStaffWeeklyOff || !selectedStaff) return [];
+    const bookingDate = new Date(`${selectedDate}T00:00:00`);
+    const dayOfWeek = bookingDate.getDay();
+    const serviceDuration = selectedService?.duration_minutes || 0;
+    const wholeShopHoliday = shopHolidays.find(
+      holiday => holiday.staff_id === null && holiday.holiday_date === selectedDate
+    );
+    const toMinutes = (time: string) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
 
     return ALL_TIME_SLOTS.map(slotTime => {
-      const [slotHour] = slotTime.split(':').map(Number);
-      const [breakStartHour] = selectedStaff.breakStart.split(':').map(Number);
-      const [breakEndHour] = selectedStaff.breakEnd.split(':').map(Number);
+      if (wholeShopHoliday) {
+        return {
+          time: slotTime,
+          isAvailable: false,
+          reason: wholeShopHoliday.reason || 'ร้านหยุด',
+        };
+      }
 
-      const isBreak = slotHour >= breakStartHour && slotHour < breakEndHour;
-      const isBooked = !!SLOT_STATUS_MAP[slotTime];
+      const slotStart = toMinutes(slotTime);
+      const slotEnd = slotStart + serviceDuration;
+      const candidateStaff = selectedStaff ? [selectedStaff] : staffList;
+      const hasAvailableStaff = candidateStaff.some(staff => {
+        const isStaffHoliday = shopHolidays.some(
+          holiday => holiday.staff_id === staff.id && holiday.holiday_date === selectedDate
+        );
+        if (isStaffHoliday) return false;
+
+        const schedule = staffSchedules.find(
+          item => item.staff_id === staff.id && item.day_of_week === dayOfWeek
+        );
+        if (!schedule) return true;
+        if (!schedule.is_working_day) return false;
+
+        const outsideWorkingHours =
+          slotStart < toMinutes(schedule.work_start) || slotEnd > toMinutes(schedule.work_end);
+        const overlapsBreak = schedule.break_start && schedule.break_end
+          ? slotStart < toMinutes(schedule.break_end) && slotEnd > toMinutes(schedule.break_start)
+          : false;
+        return !outsideWorkingHours && !overlapsBreak;
+      });
 
       return {
         time: slotTime,
-        isAvailable: !isBreak && !isBooked,
-        reason: isBreak ? 'พักเที่ยง' : isBooked ? 'คิวเต็มแล้ว' : 'ว่าง'
+        isAvailable: hasAvailableStaff,
+        reason: hasAvailableStaff ? 'ว่าง' : 'ไม่ว่าง',
       };
     });
-  }, [selectedStaff, isSpecialShopHoliday, isStaffWeeklyOff]);
+  }, [selectedDate, selectedService, selectedStaff, shopHolidays, staffList, staffSchedules]);
+
+  const selectedSlotAvailable = availableTimeSlots.some(
+    slot => slot.time === selectedTime && slot.isAvailable
+  );
+
+  const handleCreateHold = async () => {
+    if (!shop || !selectedService || !customerName || !customerPhone) {
+      setErrorMessage('กรุณากรอกชื่อและเบอร์โทรศัพท์ของผู้จองให้ครบถ้วน');
+      return;
+    }
+    if (!selectedSlotAvailable) {
+      setErrorMessage('เวลาที่เลือกอยู่นอกตารางงานหรือเป็นวันหยุด กรุณาเลือกเวลาใหม่');
+      return;
+    }
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      const res = await createBookingHold({
+        shop_id: shop.id,
+        service_id: selectedService.id,
+        staff_id: selectedStaff?.id || null,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        booking_date: selectedDate,
+        start_time: selectedTime + ':00',
+      });
+      setHoldResult(res);
+      setTimeLeft(900); // 15 mins
+      setStep(3);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการล็อกรอบเวลา กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -155,18 +212,40 @@ export default function BookingPage() {
     }
   };
 
-  const handleCompleteBooking = (e: React.FormEvent) => {
+  const handleCompleteBooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!holdResult || !slipFile) {
+      setErrorMessage('กรุณาแนบไฟล์สลิปก่อนยืนยันการโอนเงิน');
+      return;
+    }
+
+    setErrorMessage(null);
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const slipUrl = await uploadDepositSlip(holdResult.booking_id, slipFile);
+      await submitDepositSlip(holdResult.booking_id, slipUrl);
       setBookingSuccess(true);
-    }, 1200);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการส่งสลิป');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoadingShop) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-400 mx-auto" />
+          <p className="text-xs text-slate-400">กำลังโหลดข้อมูลร้านค้า...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Top Header Bar with Clickable Shop Phone */}
+      {/* Top Header Bar */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-slate-800 px-4 py-3">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -174,7 +253,7 @@ export default function BookingPage() {
               Q
             </div>
             <div>
-              <h1 className="text-sm font-semibold tracking-wide text-white capitalize">{slug.replace(/-/g, ' ')}</h1>
+              <h1 className="text-sm font-semibold tracking-wide text-white capitalize">{shop?.name || slug.replace(/-/g, ' ')}</h1>
               <p className="text-[10px] text-emerald-400 font-medium">ระบบจองคิวออนไลน์ • ชำระมัดจำปลอดภัย</p>
             </div>
           </div>
@@ -192,6 +271,13 @@ export default function BookingPage() {
 
       {/* Main Content Area */}
       <main className="max-w-md mx-auto w-full px-4 py-6 flex-1">
+        {errorMessage && (
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 mb-4 text-xs text-rose-300 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {bookingSuccess ? (
           /* PENDING REVIEW / SUBMITTED STATE (PRODUCT_RULES_V1 SECTION 1.4) */
           <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 text-center shadow-xl shadow-amber-950/40 animate-fade-in space-y-5">
@@ -200,10 +286,10 @@ export default function BookingPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white mb-1">ได้รับสลิปแล้ว รอตรวจสอบสลิป</h2>
-              <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">BK-7K2M9Q</span></p>
+              <p className="text-xs text-slate-400">รหัสการจอง: <span className="font-mono text-emerald-400 font-bold">{holdResult?.booking_code || 'BK-7K2M9Q'}</span></p>
             </div>
 
-            {/* Receipt Card for Customer aligned with PRODUCT_RULES_V1 1.4 */}
+            {/* Receipt Card for Customer */}
             <div className="bg-slate-950 border border-amber-500/30 rounded-xl p-4 text-left space-y-2 relative overflow-hidden shadow-md">
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-xs font-bold text-white flex items-center gap-1">
@@ -216,9 +302,9 @@ export default function BookingPage() {
 
               <div className="text-xs space-y-1.5 pt-1 text-slate-300">
                 <p>บริการ: <span className="font-semibold text-white">{selectedService?.name}</span></p>
-                <p>พนักงาน: <span className="font-semibold text-white">{selectedStaff?.nickname}</span></p>
+                <p>พนักงาน: <span className="font-semibold text-white">{selectedStaff?.nickname || 'ไม่ระบุพนักงาน (สุ่มช่าง)'}</span></p>
                 <p>เวลานัด: <span className="font-semibold text-emerald-400">{selectedDate} @ {selectedTime} น.</span></p>
-                <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit}.00 (ส่งสลิปแล้ว)</span></p>
+                <p>ยอดมัดจำ: <span className="font-semibold text-emerald-400 font-mono">฿{selectedService?.deposit_amount ?? shop?.default_deposit_amount ?? 100}.00 (ส่งสลิปแล้ว)</span></p>
                 <p className="text-slate-400 pt-1">เบอร์สายตรงร้านค้า: <a href={`tel:${shopPhone.replace(/-/g, '')}`} className="font-mono font-bold text-amber-400 hover:underline">{shopPhone}</a></p>
               </div>
             </div>
@@ -226,7 +312,7 @@ export default function BookingPage() {
             {/* Central LINE OA Binding Button */}
             <div className="space-y-2">
               <a
-                href="https://line.me/R/oaMessage/@central_booking_oa/?%E0%B8%9C%E0%B8%B9%E0%B8%81%E0%B8%84%E0%B8%B4%E0%B8%A7%20BK-7K2M9Q-9X4K"
+                href={`https://line.me/R/oaMessage/@${CENTRAL_LINE_OA_ID}/?%E0%B8%9C%E0%B8%B9%E0%B8%81%E0%B8%84%E0%B8%B4%E0%B8%A7%20${holdResult?.booking_code}-${holdResult?.link_token}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3.5 px-4 rounded-xl font-bold text-sm flex flex-col items-center justify-center gap-0.5 shadow-lg shadow-emerald-950/50 transition-all text-center"
@@ -235,7 +321,7 @@ export default function BookingPage() {
                   <MessageCircle className="w-5 h-5 flex-shrink-0" />
                   <span>รับแจ้งเตือนผ่านไลน์ เพื่อไม่พลาดคิวของท่าน</span>
                 </div>
-                <span className="text-[11px] font-normal text-emerald-100 opacity-90">เราจะแจ้งเตือนก่อนถึงเวลานัด</span>
+                <span className="text-[11px] font-normal text-emerald-100 opacity-90">กดผูกบัญชี LINE กลาง (@{CENTRAL_LINE_OA_ID})</span>
               </a>
 
               <a
@@ -258,7 +344,7 @@ export default function BookingPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {DEMO_SERVICES.map((sv) => (
+                  {services.map((sv) => (
                     <div
                       key={sv.id}
                       onClick={() => setSelectedService(sv)}
@@ -276,8 +362,8 @@ export default function BookingPage() {
                       </div>
                       <p className="text-xs text-slate-400 mb-3 leading-relaxed">{sv.description}</p>
                       <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80 pt-2.5">
-                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-500" /> {sv.duration} นาที</span>
-                        <span className="text-amber-400 font-medium">มัดจำ ฿{sv.deposit}</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-500" /> {sv.duration_minutes} นาที</span>
+                        <span className="text-amber-400 font-medium">มัดจำ ฿{sv.deposit_amount ?? shop?.default_deposit_amount ?? 100}</span>
                       </div>
                     </div>
                   ))}
@@ -294,19 +380,57 @@ export default function BookingPage() {
               </div>
             )}
 
-            {/* STEP 2: SELECT STAFF & TIME */}
+            {/* STEP 2: SELECT STAFF & TIME & CUSTOMER INFO */}
             {step === 2 && (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div>
                   <h2 className="text-lg font-bold text-white mb-1">2. เลือกพนักงาน & นัดหมายวันเวลา</h2>
                   <p className="text-xs text-slate-400">บริการที่เลือก: <span className="text-emerald-400 font-medium">{selectedService?.name}</span></p>
                 </div>
 
+                {/* Customer Details Form */}
+                <div className="space-y-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                  <p className="text-xs font-bold text-white">ข้อมูลผู้จอง (สำหรับยืนยันสล็อต)</p>
+                  <div>
+                    <label className="text-xs text-slate-300 mb-1 block">ชื่อผู้จอง *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="เช่น คุณสมชาย ใจดี"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-300 mb-1 block">เบอร์โทรศัพท์ *</label>
+                    <input
+                      required
+                      type="tel"
+                      placeholder="08X-XXX-XXXX"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
                 {/* Staff Selection */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-2 block">เลือกพนักงานให้บริการ (หรือเลือกสุ่มไม่ระบุพนักงาน)</label>
+                  <label className="text-xs font-semibold text-slate-300 mb-2 block">เลือกพนักงานให้บริการ</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {DEMO_STAFF.map((st) => (
+                    <div
+                      onClick={() => setSelectedStaff(null)}
+                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                        selectedStaff === null
+                          ? 'bg-emerald-500/10 border-emerald-500 text-white font-bold'
+                          : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <User className={`w-4 h-4 mb-1 ${selectedStaff === null ? 'text-emerald-400' : 'text-slate-500'}`} />
+                      <p className="text-xs font-semibold">ไม่ระบุช่าง (ช่างคนไหนก็ได้)</p>
+                    </div>
+                    {staffList.map((st) => (
                       <div
                         key={st.id}
                         onClick={() => setSelectedStaff(st)}
@@ -317,7 +441,7 @@ export default function BookingPage() {
                         }`}
                       >
                         <User className={`w-4 h-4 mb-1 ${selectedStaff?.id === st.id ? 'text-emerald-400' : 'text-slate-500'}`} />
-                        <p className="text-xs font-semibold">{st.nickname}</p>
+                        <p className="text-xs font-semibold">{st.nickname || st.name}</p>
                       </div>
                     ))}
                   </div>
@@ -336,44 +460,29 @@ export default function BookingPage() {
 
                 {/* Time Slot Display */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-2 block">เลือกรอบเวลาที่ว่าง (ป้องกันการจองซ้ำซ้อน)</label>
-
-                  {isSpecialShopHoliday ? (
-                    <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3.5 text-center text-xs text-rose-300 space-y-1">
-                      <AlertTriangle className="w-5 h-5 mx-auto text-rose-400" />
-                      <p className="font-bold">{isSpecialShopHoliday.reason}</p>
-                      <p className="text-[11px] text-slate-400">กรุณาเลือกวันที่อื่นเพื่อจองคิวบริการ</p>
-                    </div>
-                  ) : isStaffWeeklyOff ? (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 text-center text-xs text-amber-300 space-y-1">
-                      <CalendarOff className="w-5 h-5 mx-auto text-amber-400" />
-                      <p className="font-bold">{selectedStaff?.nickname} หยุดประจำสัปดาห์ในวันที่เลือก</p>
-                      <p className="text-[11px] text-slate-400">กรุณาเลือกพนักงานคนอื่น หรือเลือกวันที่พนักงานเข้าทำงาน</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {availableTimeSlots.map((slot) => (
-                        <button
-                          key={slot.time}
-                          type="button"
-                          disabled={!slot.isAvailable}
-                          onClick={() => slot.isAvailable && setSelectedTime(slot.time)}
-                          className={`py-2 px-1 rounded-lg text-xs font-mono border transition-all text-center ${
-                            selectedTime === slot.time && slot.isAvailable
-                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold shadow-md'
-                              : slot.isAvailable
+                  <label className="text-xs font-semibold text-slate-300 mb-2 block">เลือกรอบเวลาที่ว่าง</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {availableTimeSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        type="button"
+                        disabled={!slot.isAvailable}
+                        onClick={() => slot.isAvailable && setSelectedTime(slot.time)}
+                        className={`py-2 px-1 rounded-lg text-xs font-mono border transition-all text-center ${
+                          selectedTime === slot.time && slot.isAvailable
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold shadow-md'
+                            : slot.isAvailable
                               ? 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                               : 'bg-slate-900/30 border-slate-900 text-slate-600 cursor-not-allowed line-through'
-                          }`}
-                        >
-                          <div>{slot.time} น.</div>
-                          <div className={`text-[9px] font-sans ${slot.isAvailable ? 'text-emerald-400 font-medium' : 'text-slate-500'}`}>
-                            {slot.reason}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                        }`}
+                      >
+                        <div>{slot.time} น.</div>
+                        <div className={`text-[9px] font-sans ${slot.isAvailable ? 'text-emerald-400' : 'text-slate-500'}`}>
+                          {slot.reason}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-4">
@@ -384,12 +493,21 @@ export default function BookingPage() {
                     ย้อนกลับ
                   </button>
                   <button
-                    disabled={isSpecialShopHoliday !== undefined || isStaffWeeklyOff || !selectedTime}
-                    onClick={() => setStep(3)}
+                    disabled={isSubmitting || !customerName || !customerPhone || !selectedTime || !selectedSlotAvailable}
+                    onClick={handleCreateHold}
                     className="w-2/3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40"
                   >
-                    ถัดไป: ชำระมัดจำ
-                    <ChevronRight className="w-4 h-4" />
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        กำลัง ล็อกสล็อตเวลา...
+                      </>
+                    ) : (
+                      <>
+                        ถัดไป: ชำระมัดจำ
+                        <ChevronRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -410,18 +528,17 @@ export default function BookingPage() {
                       <Clock className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
                       <span>กรุณาโอนมัดจำภายใน <span className="font-mono text-sm font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">{formatCountdown(timeLeft)}</span> นาที</span>
                     </div>
-                    <p className="text-[10px] text-slate-400">ระบบล็อกสล็อตเวลาไว้ให้ท่าน 15 นาที หากพ้นเวลานี้ คิวจะถูกปล่อยให้ลูกค้ารายอื่นโดยอัตโนมัติ</p>
+                    <p className="text-[10px] text-slate-400">รหัสจองคิวชั่วคราว: <span className="font-mono text-emerald-400 font-bold">{holdResult?.booking_code}</span></p>
                   </div>
                 ) : (
                   <div className="bg-rose-500/20 border-2 border-rose-500/40 rounded-xl p-4 text-center space-y-2 animate-fade-in">
                     <div className="flex items-center justify-center gap-2 text-rose-300 font-extrabold text-xs">
                       <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />
-                      <span>⏰ สล็อตเวลาที่คุณเลือกล็อกไว้หมดอายุแล้ว (เกิน 15 นาที)</span>
+                      <span>⏰ สล็อตเวลาที่คุณเลือกล็อกไว้หมดอายุแล้ว</span>
                     </div>
-                    <p className="text-xs text-rose-200/80">ระบบได้ปล่อยคิวให้ลูกค้ารายอื่นแล้ว โปรดเลือกรอบเวลานัดหมายใหม่อีกครั้ง</p>
                     <button
                       type="button"
-                      onClick={() => { setTimeLeft(900); setStep(2); }}
+                      onClick={() => setStep(2)}
                       className="bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all mt-1 inline-flex items-center gap-1.5"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -439,7 +556,7 @@ export default function BookingPage() {
                   <div className="pt-2">
                     <div className="w-44 h-44 bg-white rounded-2xl p-2 mx-auto mb-2 flex items-center justify-center border border-slate-300 shadow-xl">
                       <img 
-                        src={`https://promptpay.io/${promptpayNumber.replace(/[^0-9]/g, '')}/${selectedService?.deposit || 100}.png`} 
+                        src={`https://promptpay.io/${promptpayNumber.replace(/[^0-9]/g, '')}/${selectedService?.deposit_amount ?? shop?.default_deposit_amount ?? 100}.png`} 
                         alt="PromptPay QR Code"
                         className="w-40 h-40 object-contain rounded-xl"
                       />
@@ -456,8 +573,8 @@ export default function BookingPage() {
 
                   <div>
                     <p className="text-xs text-slate-400">ยอดเงินมัดจำล็อกคิว</p>
-                    <p className="text-2xl font-extrabold text-emerald-400 font-mono my-0.5">฿{selectedService?.deposit}.00</p>
-                    <p className="text-[11px] text-slate-400">ชื่อบัญชี: <span className="text-white font-medium">คุณฟรี (Good Cuts Barber)</span></p>
+                    <p className="text-2xl font-extrabold text-emerald-400 font-mono my-0.5">฿{selectedService?.deposit_amount ?? shop?.default_deposit_amount ?? 100}.00</p>
+                    <p className="text-[11px] text-slate-400">ชื่อบัญชี: <span className="text-white font-medium">{promptpayName}</span></p>
                     
                     <div className="flex items-center justify-center gap-2 mt-1">
                       <span className="text-xs text-slate-400">เลขพร้อมเพย์: <span className="font-mono text-white font-bold">{promptpayNumber}</span></span>
@@ -473,59 +590,32 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Customer Details Form */}
-                <div className="space-y-3 pt-2">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-300 mb-1 block">ชื่อผู้จอง *</label>
+                {/* Slip Upload */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 mb-1 block">แนบสลิปการโอนมัดจำ *</label>
+                  <div className="relative border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-4 text-center bg-slate-900/50 transition-all">
                     <input
                       required
-                      type="text"
-                      placeholder="เช่น คุณสมชาย ใจดี"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-slate-300 mb-1 block">เบอร์โทรศัพท์ (สำหรับแจ้งเตือนคิว) *</label>
-                    <input
-                      required
-                      type="tel"
-                      placeholder="08X-XXX-XXXX"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  {/* Slip Upload */}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-300 mb-1 block">แนบสลิปการโอนมัดจำ *</label>
-                    <div className="relative border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-4 text-center bg-slate-900/50 transition-all">
-                      <input
-                        required
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                      />
-                      {slipPreview ? (
-                        <div className="flex items-center justify-center gap-3">
-                          <img src={slipPreview} alt="Slip" className="w-12 h-16 object-cover rounded-md border border-emerald-500" />
-                          <div className="text-left">
-                            <p className="text-xs font-semibold text-emerald-400">แนบสลิปเรียบร้อยแล้ว</p>
-                            <p className="text-[10px] text-slate-400">คลิกเพื่อเปลี่ยนรูป</p>
-                          </div>
+                    {slipPreview ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <img src={slipPreview} alt="Slip" className="w-12 h-16 object-cover rounded-md border border-emerald-500" />
+                        <div className="text-left">
+                          <p className="text-xs font-semibold text-emerald-400">แนบสลิปเรียบร้อยแล้ว</p>
+                          <p className="text-[10px] text-slate-400">คลิกเพื่อเปลี่ยนรูป</p>
                         </div>
-                      ) : (
-                        <div className="space-y-1">
-                          <Upload className="w-6 h-6 text-slate-500 mx-auto" />
-                          <p className="text-xs text-slate-300 font-medium">คลิกเพื่ออัปโหลดสลิปเงินมัดจำ</p>
-                          <p className="text-[10px] text-slate-500">รองรับไฟล์ JPG, PNG</p>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Upload className="w-6 h-6 text-slate-500 mx-auto" />
+                        <p className="text-xs text-slate-300 font-medium">คลิกเพื่ออัปโหลดสลิปเงินมัดจำ</p>
+                        <p className="text-[10px] text-slate-500">รองรับไฟล์ JPG, PNG</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -539,10 +629,10 @@ export default function BookingPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting || timeLeft === 0}
+                    disabled={isSubmitting || timeLeft === 0 || !slipFile}
                     className="w-2/3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40"
                   >
-                    {timeLeft === 0 ? 'หมดเวลาล็อกคิว (โปรดเลือกเวลาใหม่)' : isSubmitting ? 'กำลังส่งข้อมูล...' : 'ยืนยันการจองคิว'}
+                    {isSubmitting ? 'กำลังส่งข้อมูล...' : 'ยืนยันการโอนเงินมัดจำ'}
                     <ShieldCheck className="w-4 h-4" />
                   </button>
                 </div>

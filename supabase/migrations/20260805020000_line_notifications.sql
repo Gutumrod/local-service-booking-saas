@@ -36,5 +36,5 @@ ALTER TABLE local_service.line_notification_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public line users insert" ON local_service.line_users FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public line logs insert" ON local_service.line_notification_logs FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Members view line users" ON local_service.line_users ALL USING (local_service.is_shop_member(shop_id));
-CREATE POLICY "Members view line logs" ON local_service.line_notification_logs ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members view line users" ON local_service.line_users FOR ALL USING (local_service.is_shop_member(shop_id));
+CREATE POLICY "Members view line logs" ON local_service.line_notification_logs FOR ALL USING (local_service.is_shop_member(shop_id));
