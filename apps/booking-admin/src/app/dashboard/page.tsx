@@ -14,6 +14,7 @@ import {
   saveStaffWeeklySchedule,
   setServiceActive,
   setStaffActive,
+  startBillingCheckout,
   updateService,
   updateShopSettings,
   type DashboardBooking,
@@ -223,6 +224,20 @@ export default function AdminDashboard() {
       setBookingError(error instanceof Error ? error.message : 'ยกเลิกคิวไม่สำเร็จ');
     } finally {
       setMutatingBookingId(null);
+    }
+  };
+
+  const handleUpgrade = async (plan: 'basic_490' | 'pro_990') => {
+    if (shopRole !== 'owner') return;
+
+    setMutatingResourceId(`checkout-${plan}`);
+    setManagementError('');
+    try {
+      const url = await startBillingCheckout(plan);
+      window.location.href = url;
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'สร้างลิงก์ชำระเงินไม่สำเร็จ');
+      setMutatingResourceId(null);
     }
   };
 
@@ -1341,6 +1356,10 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {managementError && (
+              <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300 max-w-xl mx-auto text-center">{managementError}</p>
+            )}
+
             {/* 3 Main Tiers Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
               {/* FREE TRIAL TIER */}
@@ -1411,12 +1430,18 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-800/80">
-                  <Link 
-                    href="/register?plan=basic_490"
-                    className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700 transition-all block text-center"
+                  <button
+                    type="button"
+                    onClick={() => handleUpgrade('basic_490')}
+                    disabled={shopRole !== 'owner' || billingCycle === 'yearly' || mutatingResourceId === 'checkout-basic_490'}
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700 transition-all block text-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    เลือกแพ็กเกจ Basic ({billingCycle === 'monthly' ? '฿490/เดือน' : '฿4,900/ปี'})
-                  </Link>
+                    {mutatingResourceId === 'checkout-basic_490'
+                      ? 'กำลังไปหน้าชำระเงิน...'
+                      : billingCycle === 'yearly'
+                        ? 'รายปียังไม่รองรับ (เร็วๆ นี้)'
+                        : `เลือกแพ็กเกจ Basic (฿490/เดือน)`}
+                  </button>
                 </div>
               </div>
 
@@ -1456,12 +1481,18 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="pt-4 border-t border-slate-800/80">
-                  <Link 
-                    href="/register?plan=pro_990"
-                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-950/40 transition-all block text-center"
+                  <button
+                    type="button"
+                    onClick={() => handleUpgrade('pro_990')}
+                    disabled={shopRole !== 'owner' || billingCycle === 'yearly' || mutatingResourceId === 'checkout-pro_990'}
+                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-950/40 transition-all block text-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    เลือกแพ็กเกจ Pro ({billingCycle === 'monthly' ? '฿990/เดือน' : '฿9,900/ปี'})
-                  </Link>
+                    {mutatingResourceId === 'checkout-pro_990'
+                      ? 'กำลังไปหน้าชำระเงิน...'
+                      : billingCycle === 'yearly'
+                        ? 'รายปียังไม่รองรับ (เร็วๆ นี้)'
+                        : `เลือกแพ็กเกจ Pro (฿990/เดือน)`}
+                  </button>
                 </div>
               </div>
             </div>

@@ -498,3 +498,18 @@ export async function cancelBooking(bookingId: string, reason: string): Promise<
 
   if (error) throw new Error(error.message);
 }
+
+export async function startBillingCheckout(plan: 'basic_490' | 'pro_990'): Promise<string> {
+  const response = await fetch('/api/billing/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan }),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.url) {
+    throw new Error(data?.error || 'สร้างลิงก์ชำระเงินไม่สำเร็จ');
+  }
+
+  return data.url as string;
+}
