@@ -123,8 +123,8 @@ Phase A-D เสร็จแล้ว, Phase E แตกเป็น checkpoint 
   - ✅ E4.2 Product/Price สร้างจริงใน Stripe test mode ผ่าน CLI (`STRIPE_PRICE_BASIC`/`STRIPE_PRICE_PRO` ใน `.env.local`)
   - ✅ E4.3 idempotency table + E4.4 webhook handler (5 events) — commit `d5d5e2d` (เจอ+แก้บั๊ก `sync_subscription_state` ambiguous column ระหว่าง live test)
   - ✅ E4.5 Checkout Session route + ต่อปุ่ม upgrade ใน dashboard จริง — commit `5fb989f`
-  - ⬜ **E4.6 Customer Portal route** ← **จุดต่อครั้งหน้า**
-  - ⬜ E4.7 billing tab เลิก mock (โควตา/ประวัติ ดึงจาก `subscriptions` จริง)
+  - ✅ E4.6 Customer Portal route + ปุ่ม "จัดการการชำระเงิน" ใน dashboard ต่อจริงแล้ว — ระหว่าง verify เจอบั๊กจริงใน E4.4 (`current_period_end` ไม่มีอยู่ระดับบนของ Subscription object แล้วใน API version ปัจจุบัน, การกด cancel ผ่าน Portal ไม่ตั้ง `cancel_at_period_end=true` แต่ตั้ง `cancel_at` แทน) แก้แล้ว verify ซ้ำผ่าน — ดู [`BRIEF_PHASE_E4_STRIPE_BILLING.md`](docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md)
+  - ⬜ **E4.7 billing tab เลิก mock** (โควตา/ประวัติ ดึงจาก `subscriptions` จริง) ← **จุดต่อครั้งหน้า**
   - ⬜ E4.8 booking-acceptance gate ตาม subscription status (`canceled`/`unpaid` ห้ามจองใหม่)
   - ⬜ E4.9 manual config docs (webhook secret จริงจาก Dashboard, live-mode Product/Price)
 

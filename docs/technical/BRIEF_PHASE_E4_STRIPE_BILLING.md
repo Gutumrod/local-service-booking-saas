@@ -76,15 +76,19 @@ Also done: `stripe` SDK added to `booking-admin` (commit `72ea9af`), plus `scrip
 
 ---
 
-## E4.6 — Customer Portal route + wire-up
+## E4.6 — Customer Portal route + wire-up ✅ DONE
 
-**Tasks:**
-1. New route creating a Stripe Billing Portal session (`stripe.billingPortal.sessions.create`) for the shop's `stripe_customer_id`, owner-only.
-2. Wire dashboard billing tab's "จัดการการชำระเงิน" action to redirect there instead of any mock.
+New route `apps/booking-admin/src/app/api/billing/portal/route.ts` (owner-only, same auth/membership pattern as E4.5's checkout route), creates a `stripe.billingPortal.sessions.create` session for the shop's `stripe_customer_id`, returns to `/dashboard?tab=billing`. Dashboard billing tab now has a real "จัดการการชำระเงิน / ประวัติใบแจ้งหนี้" button (`handleManageBilling` in `dashboard/page.tsx`, `startBillingPortal()` in `admin-service.ts`) wired to it — no mock left.
+
+**Bug found + fixed during live verification (2026-08-11), unrelated to E4.6 itself but caught while testing it:** the E4.4 webhook handler's two Stripe-payload readers were wrong for API version `2026-07-29.dahlia` (confirmed by inspecting the raw event JSON via `stripe events retrieve`):
+- `current_period_end` does not exist on the top-level `Subscription` object in this API version — it only exists per subscription item (`sub.items.data[0].current_period_end`). The old code's raw-cast fallback silently read `undefined` and every subscription's `current_period_end` landed `NULL` in the DB from E4.4 onward, including right after a successful checkout.
+- Scheduling a cancellation via the Billing Portal does **not** set `cancel_at_period_end: true` in this API version — it leaves that boolean `false` and instead sets `cancel_at` (a unix timestamp equal to the period end). The old code read only `cancel_at_period_end`, so a canceled-at-period-end subscription silently stayed indistinguishable from an active one in the DB.
+
+Fixed in `apps/booking-admin/src/app/api/webhooks/stripe/route.ts`: `getSubscriptionPeriodEnd()` now reads `sub.items.data[0]?.current_period_end`; new `isCancelScheduled()` treats either `cancel_at_period_end` or a non-null `cancel_at` as "scheduled to cancel". Re-verified live: forced a fresh `customer.subscription.updated` event (`stripe subscriptions update ... --metadata`) after the fix and confirmed `subscriptions.cancel_at_period_end=true` + `current_period_end=2026-09-11` now match the Portal's own "Cancels Sep 11" display exactly.
 
 **DoD:**
-- [ ] Owner-only enforcement (403 for non-owner), same as E4.5.
-- [ ] Real Portal session opens in browser for a shop with an active test subscription; canceling there fires `customer.subscription.updated` (`cancel_at_period_end=true`) and is reflected on next dashboard load.
+- [x] Owner-only enforcement: unauthenticated call → 401 (curl-verified). Non-owner → 403 uses the identical `membership.role !== 'owner'` check already live-verified for E4.5's checkout route — same code path, not re-tested standalone.
+- [x] Real Portal session opened in browser (`billing.stripe.com`, test-mode sandbox) for a throwaway shop (`e4portal-test-shop`) with an active test subscription (completed a real Checkout with card `4242...` first). Canceled there → Portal showed "Cancels Sep 11" → `customer.subscription.updated` webhook fired (200) → `subscriptions.cancel_at_period_end` confirmed `true` via direct DB read (dashboard billing tab itself is still the E4.7 mock, so "reflected on next dashboard load" is verified at the data layer, not yet the UI — that's E4.7's job).
 
 ---
 

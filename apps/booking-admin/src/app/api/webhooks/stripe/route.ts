@@ -14,18 +14,18 @@ function getStripeClient(): Stripe {
   return new Stripe(STRIPE_SECRET_KEY);
 }
 
-// The Stripe API still returns current_period_end on subscription objects in
-// the JSON payload, but the SDK v22 type definitions don't expose it (the
-// field was replaced by billing_cycle_anchor in the typed interface). We
-// declare it here so we can access the raw API value without losing type
-// safety on the rest of the object.
-type SubscriptionWithPeriodEnd = Stripe.Subscription & {
-  current_period_end?: number | null;
-};
-
+// Confirmed live against API version 2026-07-29 (E4.6 verification): the
+// Subscription object no longer carries current_period_end at the top level
+// — it only exists per subscription item. Read it from the first item.
 function getSubscriptionPeriodEnd(sub: Stripe.Subscription): number | null {
-  const raw = sub as SubscriptionWithPeriodEnd;
-  return raw.current_period_end ?? null;
+  return sub.items.data[0]?.current_period_end ?? null;
+}
+
+// Confirmed live (E4.6): scheduling a cancellation via the Billing Portal
+// leaves cancel_at_period_end === false and instead sets cancel_at to the
+// period-end timestamp. Treat either signal as "cancellation scheduled".
+function isCancelScheduled(sub: Stripe.Subscription): boolean {
+  return sub.cancel_at_period_end || sub.cancel_at != null;
 }
 
 // --- Price-to-plan mapping ---------------------------------------------------
@@ -111,7 +111,7 @@ function extractSubscription(sub: Stripe.Subscription): SubscriptionPayload {
     plan: mapPriceIdToPlan(priceId),
     status: sub.status,
     currentPeriodEnd: getSubscriptionPeriodEnd(sub),
-    cancelAtPeriodEnd: sub.cancel_at_period_end,
+    cancelAtPeriodEnd: isCancelScheduled(sub),
   };
 }
 
@@ -312,7 +312,7 @@ export async function POST(req: NextRequest) {
             );
             payload.status = sub.status;
             payload.currentPeriodEnd = getSubscriptionPeriodEnd(sub);
-            payload.cancelAtPeriodEnd = sub.cancel_at_period_end;
+            payload.cancelAtPeriodEnd = isCancelScheduled(sub);
             if (!payload.plan) {
               payload.plan = mapPriceIdToPlan(sub.items.data[0]?.price?.id);
             }

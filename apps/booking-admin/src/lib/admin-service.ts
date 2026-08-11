@@ -513,3 +513,14 @@ export async function startBillingCheckout(plan: 'basic_490' | 'pro_990'): Promi
 
   return data.url as string;
 }
+
+export async function startBillingPortal(): Promise<string> {
+  const response = await fetch('/api/billing/portal', { method: 'POST' });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.url) {
+    throw new Error(data?.error || 'เปิดหน้าจัดการการชำระเงินไม่สำเร็จ');
+  }
+
+  return data.url as string;
+}

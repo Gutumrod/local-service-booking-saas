@@ -15,6 +15,7 @@ import {
   setServiceActive,
   setStaffActive,
   startBillingCheckout,
+  startBillingPortal,
   updateService,
   updateShopSettings,
   type DashboardBooking,
@@ -237,6 +238,20 @@ export default function AdminDashboard() {
       window.location.href = url;
     } catch (error) {
       setManagementError(error instanceof Error ? error.message : 'สร้างลิงก์ชำระเงินไม่สำเร็จ');
+      setMutatingResourceId(null);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    if (shopRole !== 'owner') return;
+
+    setMutatingResourceId('billing-portal');
+    setManagementError('');
+    try {
+      const url = await startBillingPortal();
+      window.location.href = url;
+    } catch (error) {
+      setManagementError(error instanceof Error ? error.message : 'เปิดหน้าจัดการการชำระเงินไม่สำเร็จ');
       setMutatingResourceId(null);
     }
   };
@@ -1354,6 +1369,17 @@ export default function AdminDashboard() {
                   รายปี <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full border border-amber-500/30">ประหยัด 2 เดือน</span>
                 </span>
               </div>
+
+              {shopRole === 'owner' && (
+                <button
+                  type="button"
+                  onClick={handleManageBilling}
+                  disabled={mutatingResourceId === 'billing-portal'}
+                  className="mt-4 text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {mutatingResourceId === 'billing-portal' ? 'กำลังเปิดหน้าจัดการ...' : 'จัดการการชำระเงิน / ประวัติใบแจ้งหนี้'}
+                </button>
+              )}
             </div>
 
             {managementError && (
