@@ -2,7 +2,7 @@
 
 > **โปรเจกต์:** Local Service Booking & LINE Automation SaaS  
 > **ผู้พัฒนาหลัก:** คุณฟรี (CEO) & Antigravity AI Pair Programmer  
-> **สถานะปัจจุบัน:** **Phase A-D + E1-E3.3 เสร็จสมบูรณ์** ผ่านการ verify จริงผ่าน REST API + browser และ apply บน live DB แล้วทุกจุด — **Phase E4 (Stripe Billing) กำลังทำอยู่ ปิดแล้ว E4.1-E4.5 จาก 9 checkpoint** ดูรายละเอียดที่ [`docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md`](docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md) (มี DoD checklist ต่อ checkpoint), [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md), [`docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md`](docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md)  
+> **สถานะปัจจุบัน:** **Phase A-D + E1-E3.3 ผ่าน live verification แล้ว**; E4.1-E4.6 ผ่าน live verification ก่อนหน้า และ **E4.7-E4.9 (Launch-1): migration apply แล้ว, booking-acceptance gate (E4.8) verify live ครบทุก state แล้ว (2026-08-13)** — เหลือแค่ billing tab UI/Checkout-Portal ใน browser ที่ยังไม่มีใครล็อกอินเช็คจริง และ production Stripe config (E4.9 ส่วน manual) — ดู [`docs/technical/PHASE_LAUNCH_1_COMPLETION_REPORT_2026-08-12.md`](docs/technical/PHASE_LAUNCH_1_COMPLETION_REPORT_2026-08-12.md) หัวข้อ "2026-08-13 live-gate results" และ [`docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md`](docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md)
 > **หมายเหตุ E3.3:** ทำเองคนเดียวโดยไม่มี Codex รีวิว (ผู้ใช้อนุมัติล่วงหน้าคืน 2026-08-08 — ดู vault handoff) เจอบั๊กจริง 2 จุดระหว่าง live verification ของตัวเอง (view `security_invoker` ทำให้ anon อ่านไม่ได้, และ dashboard initial load ไม่โหลด phone/PromptPay/LINE field) แก้และ verify ซ้ำก่อนปิด checkpoint ทั้งคู่  
 > **หมายเหตุ E4.3-E4.4 (2026-08-11):** implementation แรกทำโดย Qwen Code (dispatch ผ่าน agent-relay-dispatch skill), Claude ตรวจ+verify live ต่อ เจอบั๊กจริง (`sync_subscription_state` RPC — `RETURNS TABLE(..., shop_id UUID)` ชนกับคอลัมน์ `subscriptions.shop_id` จน ambiguous ตอนรันจริง แม้ build/CREATE FUNCTION ผ่านสะอาด) แก้แล้ว verify ซ้ำครบ ดู [`QWEN_E4_3_E4_4_HANDOFF.md`](docs/technical/QWEN_E4_3_E4_4_HANDOFF.md) และ vault log ล่าสุด
 > **Supabase Live Project:** `https://gyleqrjdzwwlqierdwcy.supabase.co` (`local_service` schema)  
@@ -62,7 +62,7 @@ D:\AI-Workspace\projects\local-service-booking-saas
    - **E3.2 — Schedules & Holidays:** RPC บันทึกตารางพนักงาน 7 วันแบบ atomic (ตรวจวันซ้ำ/เวลา/break) + RPC จัดการวันหยุดร้าน (idempotency-keyed) — owner/admin แก้ได้, staff อ่านอย่างเดียว (ยังไม่มี column เชื่อม `auth user` กับ `staff.id` จึงพิสูจน์ "ตัวเอง" ของ staff ไม่ได้ — deferred)
    - **ทุก checkpoint ปิดช่องโหว่เดียวกัน:** table เดิมมี `GRANT ALL`/policy `FOR ALL USING (is_shop_member(...))` ที่ไม่แยก role เลย แปลว่า **staff ธรรมดาเขียนตรงเข้าตารางได้มาตลอด** ก่อนหน้านี้ — ทุก RPC ใหม่ revoke direct write จาก `authenticated` แล้วบังคับผ่าน RPC ที่เช็ค role จริง
    - **E3.3 — Shop Settings:** เสร็จแล้ว — พบและปิดช่องโหว่: `shops` table เปิดให้ anon `select *` ได้ทุกคอลัมน์รวม `subscription_status`, `trial_ends_at`, `owner_name` (ยืนยันจริงผ่าน REST) แก้ด้วย view `shop_public_profile` (คอลัมน์จำกัดเฉพาะที่หน้าจองใช้จริง) + RPC `update_shop_settings` (owner เท่านั้น ตาม V1 ข้อ 7) ตัด Custom LINE Channel Token input ออกจาก client ทั้งหมด (ไม่เคยเชื่อม backend เลย ถอดก่อนจะกลายเป็น client secret risk)
-   - **E4 (Billing/Stripe) — กำลังทำ:** E4.1 (schema) → E4.2 (Product/Price ใน Stripe test mode สร้างผ่าน CLI แล้ว) → E4.3 (idempotency table) → E4.4 (webhook handler 5 events, sync `subscriptions`+`shops.subscription_status` atomic) → E4.5 (Checkout Session route, owner-only, ปุ่ม upgrade ใน dashboard ต่อจริงแล้ว) เสร็จแล้วทั้ง 5 ข้อ, verify จริงทุกจุดผ่าน `stripe trigger`/RPC ตรง/browser จริง — เหลือ E4.6 (Customer Portal) → E4.7 (billing tab เลิก mock) → E4.8 (booking-acceptance gate ตาม subscription status) → E4.9 (manual config docs) ดู checklist เต็มที่ [`BRIEF_PHASE_E4_STRIPE_BILLING.md`](docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md)
+   - **E4 (Billing/Stripe) — Launch-1 staged, not live-complete:** E4.1-E4.6 ได้ verify live แล้ว. E4.7 billing tab ใช้ `subscriptions` จริง, E4.8 booking-acceptance gate และ E4.9 docs อยู่ใน source แล้ว แต่ต้อง apply migration + verify Stripe/REST/browser ก่อนปิด phase. ดู [`PHASE_LAUNCH_1_COMPLETION_REPORT_2026-08-12.md`](docs/technical/PHASE_LAUNCH_1_COMPLETION_REPORT_2026-08-12.md).
 
 ---
 
@@ -71,7 +71,7 @@ D:\AI-Workspace\projects\local-service-booking-saas
 - 📄 **Master Spec & Rules:** [`PRODUCT_RULES_V1.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/PRODUCT_RULES_V1.md)
 - 🛠️ **แผนงาน Phase A-E:** [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](file:///D:/AI-Workspace/projects/local-service-booking-saas/docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md)
 
-## 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`) — เชื่อม backend จริงแล้ว 5/6 แท็บ
+## 3.2 หน้าหลังบ้านร้านค้า (`apps/booking-admin/src/app/dashboard/page.tsx`) — 6/6 แท็บเชื่อมใน source, Launch-1 รอ live gate
 
 - สถานะ 6 แท็บ (อัปเดต 2026-08-08 หลัง E3.3):
   1. `bookings` ✅ **จริง (E2):** โหลดคิวจริงตาม shop ของผู้ login, approve/reject/cancel ผ่าน RPC, loading/error/empty state, ป้องกันกดซ้ำระหว่าง mutation
@@ -79,7 +79,7 @@ D:\AI-Workspace\projects\local-service-booking-saas
   3. `services` ✅ **จริง (E3.1):** เพิ่ม/แก้/ปิดบริการผ่าน RPC (owner/admin), soft-disable ผ่าน `is_active`
   4. `schedules` ✅ **จริง (E3.2):** ตารางพนักงาน 7 วัน + วันหยุดร้าน โหลด/บันทึกจริงผ่าน RPC แบบ atomic (owner/admin), ตัด state "เวลาเปิดร้านรวม" ที่ไม่มี backend column ออกแล้ว
   5. `settings` ✅ **จริง (E3.3):** ชื่อร้าน/เบอร์/ที่อยู่/PromptPay/LINE OA ID บันทึกผ่าน RPC `update_shop_settings` (owner เท่านั้น) — ตัด Channel Token input และปุ่มทดสอบส่ง LINE (mock) ออกหมดแล้ว
-  6. `billing` 🟡 **ครึ่งจริงครึ่ง mock (E4.5):** ปุ่มอัปเกรด Basic/Pro เรียก Stripe Checkout จริงแล้ว (owner-only, redirect ไป `checkout.stripe.com` จริง — verify แล้วด้วย throwaway test shop) แต่โควต/ประวัติแพ็กเกจที่แสดงยังเป็น mock ตัวเลข รอ E4.7 ต่อ query จริงจาก `subscriptions` table; ปุ่ม "รายปี" disable ไว้ (annual ไม่อยู่ใน scope E4)
+  6. `billing` 🟡 **Query จริงยืนยันแล้ว, UI ยังไม่ล็อกอินเช็ค:** owner query `subscriptions` ภายใต้ RLS ยืนยันข้อมูลถูกต้องแล้ว (2026-08-13), แสดง plan/status/รอบสิทธิ์/ยกเลิกปลายรอบ/past_due และ Checkout/Portal ใช้ Stripe เดิม; เอา quota/usage/add-on/annual/PromptPay subscription mock ออกแล้ว. **ยังไม่มีใครล็อกอินเข้าไปดูหน้าจอจริงหรือกดปุ่ม Checkout/Portal จริง** ต้องทำก่อนเรียกว่าเสร็จ
 
 ### 🟢 3.3 หน้าสมัครสมาชิกร้านค้าใหม่ (`apps/booking-admin/src/app/register/page.tsx`)
 - **4-Step Onboarding Wizard:** ข้อมูลร้านค้า ➔ เลือกแพ็กเกจ (ผูก query string `?plan=...`) ➔ ตั้งค่า PromptPay ➔ สำเร็จ
@@ -124,9 +124,9 @@ Phase A-D เสร็จแล้ว, Phase E แตกเป็น checkpoint 
   - ✅ E4.3 idempotency table + E4.4 webhook handler (5 events) — commit `d5d5e2d` (เจอ+แก้บั๊ก `sync_subscription_state` ambiguous column ระหว่าง live test)
   - ✅ E4.5 Checkout Session route + ต่อปุ่ม upgrade ใน dashboard จริง — commit `5fb989f`
   - ✅ E4.6 Customer Portal route + ปุ่ม "จัดการการชำระเงิน" ใน dashboard ต่อจริงแล้ว — ระหว่าง verify เจอบั๊กจริงใน E4.4 (`current_period_end` ไม่มีอยู่ระดับบนของ Subscription object แล้วใน API version ปัจจุบัน, การกด cancel ผ่าน Portal ไม่ตั้ง `cancel_at_period_end=true` แต่ตั้ง `cancel_at` แทน) แก้แล้ว verify ซ้ำผ่าน — ดู [`BRIEF_PHASE_E4_STRIPE_BILLING.md`](docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md)
-  - ⬜ **E4.7 billing tab เลิก mock** (โควตา/ประวัติ ดึงจาก `subscriptions` จริง) ← **จุดต่อครั้งหน้า**
-  - ⬜ E4.8 booking-acceptance gate ตาม subscription status (`canceled`/`unpaid` ห้ามจองใหม่)
-  - ⬜ E4.9 manual config docs (webhook secret จริงจาก Dashboard, live-mode Product/Price)
+  - 🟡 **E4.7 billing tab เลิก mock:** query `subscriptions` จริงยืนยันแล้ว (2026-08-13); ตัว UI/ปุ่ม Checkout-Portal ในเบราว์เซอร์ยังไม่ได้ล็อกอินเช็คจริง (auto-login ผ่าน magic link ทำไม่สำเร็จ) — ต้องมีคนล็อกอินเช็คเอง
+  - ✅ **E4.8 booking-acceptance gate:** apply migration บน live DB แล้ว (2026-08-13) — verify จริงผ่าน anon REST ครบทุก state (`canceled`/`unpaid` บล็อก, `active`/`past_due`/`trialing` ผ่าน, trial หมดอายุบล็อก) และ browser จริงทั้ง blocked/allowed page ดู [`PHASE_LAUNCH_1_COMPLETION_REPORT_2026-08-12.md`](docs/technical/PHASE_LAUNCH_1_COMPLETION_REPORT_2026-08-12.md) หัวข้อ "2026-08-13 live-gate results"
+  - 🟡 **E4.9 manual config docs:** เขียนแล้ว; production webhook/Price IDs ต้องกรอกโดย owner เมื่อมี domain จริง
 
 เมื่อเปิดแชทใหม่ ให้บอก AI Agent ในแชทใหม่ดังนี้:
 
@@ -135,9 +135,9 @@ Phase A-D เสร็จแล้ว, Phase E แตกเป็น checkpoint 
 โปรดอ่านไฟล์ PRODUCT_RULES_V1.md, PROJECT_HANDOVER_BRIEF.md,
 docs/technical/BRIEF_PHASE_E4_STRIPE_BILLING.md ในคลังไฟล์
 
-Phase A-D, E1-E3.3, และ E4.1-E4.5 เสร็จแล้ว ต่อ E4.6 (Customer Portal route
-— ปุ่มจัดการ billing ในหน้า dashboard ยังไม่เชื่อม Stripe Billing Portal จริง)
-ตาม checklist ใน BRIEF_PHASE_E4_STRIPE_BILLING.md"
+Phase A-D, E1-E3.3 และ E4.1-E4.6 ผ่าน live verification แล้ว
+Launch-1 (E4.7-E4.9) อยู่ใน source แต่ยังรอ apply migration และ live verification
+โปรดอ่าน PHASE_LAUNCH_1_COMPLETION_REPORT_2026-08-12.md แล้วทำเฉพาะ live gate ที่เหลือ"
 ```
 
 ## 6. ⚠️ ขั้นตอน Manual ที่ทำอัตโนมัติไม่ได้ (ต้องทำเองทุกครั้งที่ deploy โปรเจกต์ใหม่)

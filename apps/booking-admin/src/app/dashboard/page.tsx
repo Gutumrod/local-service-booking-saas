@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import {
   approveBookingDeposit,
   cancelBooking,
@@ -23,13 +22,14 @@ import {
   type DashboardStaff,
   type DashboardStaffSchedule,
   type DashboardHoliday,
+  type DashboardSubscription,
 } from '@/lib/admin-service';
 import { 
   Calendar, Users, DollarSign, Eye, Clock,
-  Settings, CreditCard, Sparkles, AlertCircle, Plus, ShieldCheck, 
+  Settings, AlertCircle, Plus, ShieldCheck,
   QrCode, ExternalLink, CalendarOff, Coffee, Save,
   Copy, MessageCircle, Check, Trash2, Edit3,
-  PackagePlus, Scissors, Store, Globe, Phone, X
+  Scissors, Store, Globe, Phone, X
 } from 'lucide-react';
 
 type Booking = DashboardBooking;
@@ -51,9 +51,51 @@ function getBangkokDateString() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function formatSubscriptionDate(value: string | null) {
+  if (!value) return 'ยังไม่ระบุ';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'ยังไม่ระบุ';
+
+  return new Intl.DateTimeFormat('th-TH', {
+    timeZone: 'Asia/Bangkok',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function getSubscriptionPlanLabel(plan: DashboardSubscription['plan']) {
+  switch (plan) {
+    case 'basic_490':
+      return 'Basic (฿490/เดือน)';
+    case 'pro_990':
+      return 'Pro (฿990/เดือน)';
+    default:
+      return 'ทดลองใช้ฟรี';
+  }
+}
+
+function getSubscriptionStatusDetails(status: DashboardSubscription['status']) {
+  switch (status) {
+    case 'active':
+      return { label: 'ใช้งานอยู่', className: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
+    case 'trialing':
+      return { label: 'กำลังทดลองใช้ฟรี', className: 'text-sky-300 border-sky-500/30 bg-sky-500/10' };
+    case 'past_due':
+      return { label: 'ชำระเงินค้าง', className: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
+    case 'canceled':
+      return { label: 'ยกเลิกแล้ว', className: 'text-slate-300 border-slate-600 bg-slate-800' };
+    case 'incomplete':
+      return { label: 'ชำระเงินยังไม่สมบูรณ์', className: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
+    case 'incomplete_expired':
+      return { label: 'รายการชำระเงินหมดอายุ', className: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+    case 'unpaid':
+      return { label: 'ค้างชำระ', className: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+  }
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'bookings' | 'schedules' | 'services' | 'staff' | 'settings' | 'billing'>('bookings');
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [schedules, setSchedules] = useState<DashboardStaffSchedule[]>([]);
@@ -69,6 +111,10 @@ export default function AdminDashboard() {
   const [shopRole, setShopRole] = useState<'owner' | 'admin' | 'staff'>('staff');
   const [managementError, setManagementError] = useState('');
   const [mutatingResourceId, setMutatingResourceId] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<DashboardSubscription | null>(null);
+  const [billingLoadError, setBillingLoadError] = useState('');
+  const isManagedSubscriptionPlan = (plan: DashboardSubscription['plan']) =>
+    subscription?.plan === plan && ['active', 'past_due'].includes(subscription.status);
 
   // Shop Profile State
   const [shopName, setShopName] = useState('กำลังโหลดข้อมูลร้าน...');
@@ -138,6 +184,8 @@ export default function AdminDashboard() {
       setStaffList(data.staff);
       setSchedules(data.schedules);
       setHolidaysList(data.holidays);
+      setSubscription(data.subscription);
+      setBillingLoadError(data.subscriptionError ?? '');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
       setBookingError(message);
@@ -167,6 +215,8 @@ export default function AdminDashboard() {
         setStaffList(data.staff);
         setSchedules(data.schedules);
         setHolidaysList(data.holidays);
+        setSubscription(data.subscription);
+        setBillingLoadError(data.subscriptionError ?? '');
       })
       .catch((error: unknown) => {
         if (!isCurrent) return;
@@ -443,22 +493,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
-      {/* Top Banner for 14-Day Free Trial */}
-      <div className="bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-cyan-500/20 border-b border-amber-500/30 px-4 py-2.5">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 text-amber-300 font-medium">
-            <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>คุณกำลังใช้งาน **Free Trial 14 วัน** (โควตาจอง 12/50 คิว • ตรวจสลิปออโต้ 3/10 ครั้ง)</span>
-          </div>
-          <Link 
-            href="/register?plan=basic_490"
-            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs transition-all shadow-md inline-block"
-          >
-            อัปเกรดเป็นแพ็กเกจเต็ม (เริ่มต้น 490 บ./เดือน)
-          </Link>
-        </div>
-      </div>
-
       {/* Main Header Nav */}
       <header className="bg-slate-900/80 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md px-6 py-3.5">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
@@ -1342,35 +1376,19 @@ export default function AdminDashboard() {
           </form>
         )}
 
-        {/* TAB 6: OFFICIAL BILLING & SUBSCRIPTION (UPDATED WITH 5 / 5 / 10 STAFF QUOTAS) */}
+        {/* TAB 6: Stripe billing data comes from the subscription record. */}
         {activeTab === 'billing' && (
           <div className="space-y-8 max-w-5xl mx-auto">
-            {/* Header Title */}
             <div className="text-center space-y-2">
               <span className="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold">
-                Official Pricing & Subscription Model
+                Stripe Billing
               </span>
               <h2 className="text-2xl font-extrabold text-white">แพ็กเกจระบบจองคิวบริการร้านค้า</h2>
               <p className="text-xs text-slate-400 max-w-xl mx-auto">
-                เลือกแพ็กเกจที่เหมาะกับขนาดร้านค้าของคุณ เพื่อปลดล็อกระบบรับจองคิว PromptPay QR และการส่งแจ้งเตือน LINE OA
+                สถานะสมาชิกด้านล่างอ้างอิงจากข้อมูล Stripe ที่ระบบบันทึกไว้เท่านั้น
               </p>
 
-              {/* Monthly / Yearly Toggle */}
-              <div className="flex items-center justify-center gap-3 pt-4">
-                <span className={`text-xs font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500'}`}>รายเดือน</span>
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-                  className="w-12 h-6 bg-slate-800 rounded-full p-1 border border-slate-700 transition-all relative"
-                >
-                  <div className={`w-4 h-4 bg-emerald-500 rounded-full transition-all ${billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-                <span className={`text-xs font-semibold flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'text-amber-400 font-bold' : 'text-slate-500'}`}>
-                  รายปี <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full border border-amber-500/30">ประหยัด 2 เดือน</span>
-                </span>
-              </div>
-
-              {shopRole === 'owner' && (
+              {shopRole === 'owner' && subscription && (
                 <button
                   type="button"
                   onClick={handleManageBilling}
@@ -1385,198 +1403,137 @@ export default function AdminDashboard() {
             {managementError && (
               <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300 max-w-xl mx-auto text-center">{managementError}</p>
             )}
+            {billingLoadError && (
+              <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300 max-w-xl mx-auto text-center">
+                ยังโหลดสถานะสมาชิกไม่ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง
+              </p>
+            )}
 
-            {/* 3 Main Tiers Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-              {/* FREE TRIAL TIER */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-extrabold text-lg text-white">🎁 Free Trial</h3>
-                      <p className="text-[11px] text-slate-400">ทดลองใช้ฟรี 14 วัน ก่อนตัดสินใจ</p>
+                  <div>
+                    <h3 className="font-extrabold text-lg text-white">สถานะสมาชิกปัจจุบัน</h3>
+                    <p className="mt-1 text-[11px] text-slate-400">ข้อมูลนี้เห็นได้เฉพาะเจ้าของร้าน</p>
+                  </div>
+
+                  {isBookingsLoading ? (
+                    <p className="text-xs text-slate-400">กำลังโหลดข้อมูลสมาชิก...</p>
+                  ) : shopRole !== 'owner' ? (
+                    <p className="rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-400">เฉพาะเจ้าของร้านเท่านั้นที่ดูและจัดการข้อมูลสมาชิกได้</p>
+                  ) : subscription ? (
+                    <div className="space-y-3 text-xs text-slate-300">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-slate-400">แพ็กเกจ</span>
+                        <span className="font-bold text-white">{getSubscriptionPlanLabel(subscription.plan)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-slate-400">สถานะ</span>
+                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSubscriptionStatusDetails(subscription.status).className}`}>
+                          {getSubscriptionStatusDetails(subscription.status).label}
+                        </span>
+                      </div>
+                      <div className="border-t border-slate-800 pt-3">
+                        <p className="text-slate-400">สิทธิ์รอบปัจจุบันสิ้นสุด</p>
+                        <p className="mt-1 font-semibold text-white">{formatSubscriptionDate(subscription.currentPeriodEnd)}</p>
+                      </div>
+                      {subscription.cancelAtPeriodEnd && (
+                        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200">
+                          ตั้งค่ายกเลิกเมื่อจบรอบปัจจุบันแล้ว
+                        </p>
+                      )}
+                      {subscription.status === 'past_due' && (
+                        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200">
+                          การชำระเงินล่าสุดไม่สำเร็จ กรุณาตรวจสอบข้อมูลชำระเงินใน Stripe เพื่อรักษาสิทธิ์ใช้งาน
+                        </p>
+                      )}
                     </div>
-                  </div>
-
-                  <div className="text-2xl font-extrabold text-emerald-400 font-mono">
-                    ฟรี 14 วัน
-                  </div>
-
-                  <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                    <p className="font-bold text-slate-200">สิ่งที่ได้รับในแพ็กเกจ:</p>
-                    <ul className="space-y-2 text-[11px]">
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>50 คิว</strong></li>
-                      <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>5 คน</strong></li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
-                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนใบนัดผ่าน LINE กลาง</li>
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-800/80">
-                  <span className="block text-center text-[10px] text-slate-500 mb-2">กำลังใช้งานแพ็กเกจนี้อยู่</span>
-                  <button disabled className="w-full bg-slate-800 text-slate-400 font-bold py-3 rounded-xl text-xs cursor-not-allowed">
-                    สถานะปัจจุบัน ( Trial 14 วัน )
-                  </button>
+                  ) : (
+                    <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                      ไม่พบข้อมูลสมาชิกของร้านนี้ในขณะนี้ กรุณาลองรีเฟรช หรือติดต่อผู้ดูแลระบบหากปัญหายังคงอยู่
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* BASIC TIER */}
               <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative hover:border-slate-600 transition-all">
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-extrabold text-lg text-white">⚡ Basic Starter</h3>
-                      <p className="text-[11px] text-slate-400">สำหรับร้านขนาดเล็ก (1-5 คน)</p>
+                      <p className="text-[11px] text-slate-400">แพ็กเกจรายเดือน</p>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-3xl font-extrabold text-white font-mono">
-                      {billingCycle === 'monthly' ? '฿490' : '฿4,900'} 
-                      <span className="text-xs font-normal text-slate-400">/{billingCycle === 'monthly' ? 'เดือน' : 'ปี'}</span>
-                    </div>
-                    {billingCycle === 'yearly' && <span className="text-[10px] text-amber-400 font-medium">เฉลี่ยเพียง ฿408 /เดือน</span>}
+                  <div className="text-3xl font-extrabold text-white font-mono">
+                    ฿490 <span className="text-xs font-normal text-slate-400">/เดือน</span>
                   </div>
 
-                  <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                    <p className="font-bold text-slate-200">สิ่งที่ได้รับในแพ็กเกจ:</p>
-                    <ul className="space-y-2 text-[11px]">
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>100 คิว/เดือน</strong></li>
-                      <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>5 คน</strong></li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Dashboard บริหารคิวงาน</li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตั้งตารางช่าง & วันหยุดร้าน</li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ระบบมัดจำ PromptPay QR</li>
-                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนใบนัดผ่าน LINE กลาง</li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> ตรวจสอบสลิปด้วยตนเองผ่าน Dashboard</li>
-                    </ul>
-                  </div>
+                  <p className="border-t border-slate-800 pt-4 text-xs leading-relaxed text-slate-400">
+                    เลือกผ่าน Stripe Checkout เพื่อเริ่มหรือเปลี่ยนเป็นแพ็กเกจ Basic
+                  </p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-800/80">
                   <button
                     type="button"
                     onClick={() => handleUpgrade('basic_490')}
-                    disabled={shopRole !== 'owner' || billingCycle === 'yearly' || mutatingResourceId === 'checkout-basic_490'}
+                    disabled={shopRole !== 'owner' || isManagedSubscriptionPlan('basic_490') || mutatingResourceId === 'checkout-basic_490'}
                     className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700 transition-all block text-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {mutatingResourceId === 'checkout-basic_490'
                       ? 'กำลังไปหน้าชำระเงิน...'
-                      : billingCycle === 'yearly'
-                        ? 'รายปียังไม่รองรับ (เร็วๆ นี้)'
-                        : `เลือกแพ็กเกจ Basic (฿490/เดือน)`}
+                      : isManagedSubscriptionPlan('basic_490')
+                        ? 'แพ็กเกจปัจจุบัน'
+                        : 'เลือกแพ็กเกจ Basic'}
                   </button>
                 </div>
               </div>
 
-              {/* PRO TIER */}
               <div className="bg-slate-900 border-2 border-emerald-500 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative shadow-xl shadow-emerald-950/40">
-                <span className="absolute -top-3 right-6 bg-emerald-500 text-slate-950 text-[10px] font-extrabold px-3 py-0.5 rounded-full shadow-md">
-                  แนะนำสูงสุด (Recommended)
-                </span>
-
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-extrabold text-lg text-white">🚀 Pro</h3>
-                      <p className="text-[11px] text-emerald-400 font-medium">สำหรับร้านหลายช่าง / แบรนด์พรีเมียม</p>
+                      <p className="text-[11px] text-emerald-400 font-medium">แพ็กเกจรายเดือน</p>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-3xl font-extrabold text-emerald-400 font-mono">
-                      {billingCycle === 'monthly' ? '฿990' : '฿9,900'} 
-                      <span className="text-xs font-normal text-slate-400">/{billingCycle === 'monthly' ? 'เดือน' : 'ปี'}</span>
-                    </div>
-                    {billingCycle === 'yearly' && <span className="text-[10px] text-amber-400 font-medium">เฉลี่ยเพียง ฿825 /เดือน</span>}
+                  <div className="text-3xl font-extrabold text-emerald-400 font-mono">
+                    ฿990 <span className="text-xs font-normal text-slate-400">/เดือน</span>
                   </div>
 
-                  <div className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
-                    <p className="font-bold text-emerald-400">สิ่งที่ได้รับเพิ่มจัดเต็ม:</p>
-                    <ul className="space-y-2 text-[11px]">
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รับจองคิวสูงสุด <strong>500 คิว/เดือน</strong></li>
-                      <li className="flex items-center gap-2 text-emerald-400 font-bold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> เพิ่มพนักงานสูงสุด <strong>10 คน</strong></li>
-                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนผ่าน LINE กลาง หรือ Custom LINE OA</li>
-                      <li className="flex items-center gap-2 text-emerald-300 font-semibold"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> แจ้งเตือนล่วงหน้า 1 ชั่วโมงก่อนเวลานัด</li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> รายงานสรุปคิว รายได้ & ประวัติลูกค้า</li>
-                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Priority Support การดูแลเป็นพิเศษ</li>
-                    </ul>
-                  </div>
+                  <p className="border-t border-slate-800 pt-4 text-xs leading-relaxed text-slate-400">
+                    เลือกผ่าน Stripe Checkout เพื่อเริ่มหรือเปลี่ยนเป็นแพ็กเกจ Pro
+                  </p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-800/80">
                   <button
                     type="button"
                     onClick={() => handleUpgrade('pro_990')}
-                    disabled={shopRole !== 'owner' || billingCycle === 'yearly' || mutatingResourceId === 'checkout-pro_990'}
+                    disabled={shopRole !== 'owner' || isManagedSubscriptionPlan('pro_990') || mutatingResourceId === 'checkout-pro_990'}
                     className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-950/40 transition-all block text-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {mutatingResourceId === 'checkout-pro_990'
                       ? 'กำลังไปหน้าชำระเงิน...'
-                      : billingCycle === 'yearly'
-                        ? 'รายปียังไม่รองรับ (เร็วๆ นี้)'
-                        : `เลือกแพ็กเกจ Pro (฿990/เดือน)`}
+                      : isManagedSubscriptionPlan('pro_990')
+                        ? 'แพ็กเกจปัจจุบัน'
+                        : 'เลือกแพ็กเกจ Pro'}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* ADD-ONS SECTION */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl text-left space-y-4">
-              <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                <PackagePlus className="w-4 h-4 text-emerald-400" />
-                บริการเสริม (Add-ons) กรณีใช้งานเกินโควตา
-              </h3>
-              <p className="text-xs text-slate-400">ร้านสามารถซื้อเครดิตหรือโควตาเพิ่มได้โดยไม่ต้องเปลี่ยนแพ็กเกจหลักทันที:</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                  <p className="font-bold text-white">คิวจองเพิ่มเติม</p>
-                  <p className="text-[11px] text-slate-400">เพิ่มโควตารับคิวจองรายเดือน</p>
-                </div>
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                  <p className="font-bold text-white">เครดิตตรวจสลิปออโต้</p>
-                  <p className="text-[11px] text-slate-400">ซื้อเพิ่มเป็นแพ็กเกจครั้ง</p>
-                </div>
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                  <p className="font-bold text-white">จำนวนพนักงานเพิ่ม</p>
-                  <p className="text-[11px] text-slate-400">ขยายจำนวนช่างในร้าน</p>
-                </div>
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                  <p className="font-bold text-white">เซ็ตระบบ & นำเข้าข้อมูล</p>
-                  <p className="text-[11px] text-slate-400">บริการช่วยเซ็ตอัปครั้งแรก</p>
-                </div>
-              </div>
-            </div>
-
-            {/* SINGLE GATEWAY ARCHITECTURE NOTE */}
             <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 text-left space-y-3">
               <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                สถาปัตยกรรมระบบชำระเงินค่าสมาชิก (Stripe Single Provider Standard)
+                การชำระค่าสมาชิกผ่าน Stripe
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 pt-1">
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                  <p className="font-bold text-white flex items-center gap-1.5">
-                    <QrCode className="w-4 h-4 text-emerald-400" /> PromptPay QR (ไม่ผูกบัตร)
-                  </p>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    ร้านสแกนจ่ายชำระรายรอบบิลจากหน้า Dashboard เหมาะสำหรับร้านที่ไม่ต้องการผูกบัตรเครดิต
-                  </p>
-                </div>
-
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                  <p className="font-bold text-white flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4 text-emerald-400" /> Stripe Billing & Customer Portal
-                  </p>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    ใช้ **Stripe ตัวเดียวครอบคลุม** (Checkout / Billing / Portal / Webhooks) ตัดเงินอัตโนมัติ ไม่ต้องทำระบบรับเงินสองเจ้า ป้องกันปัญหาสนาม Webhook รวน
-                  </p>
-                </div>
-              </div>
+              <p className="text-xs leading-relaxed text-slate-400">
+                การเริ่มแพ็กเกจ จัดการวิธีชำระเงิน และดูใบแจ้งหนี้ดำเนินการผ่าน Stripe Checkout และ Customer Portal เท่านั้น
+              </p>
             </div>
           </div>
         )}

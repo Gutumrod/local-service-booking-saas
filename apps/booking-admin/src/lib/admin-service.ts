@@ -84,6 +84,24 @@ export interface DashboardHoliday {
   reason: string;
 }
 
+export type SubscriptionPlan = 'free_trial' | 'basic_490' | 'pro_990';
+
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'incomplete'
+  | 'incomplete_expired'
+  | 'unpaid';
+
+export interface DashboardSubscription {
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
 export interface AdminDashboardData {
   shop: DashboardShop;
   bookings: DashboardBooking[];
@@ -91,6 +109,8 @@ export interface AdminDashboardData {
   staff: DashboardStaff[];
   schedules: DashboardStaffSchedule[];
   holidays: DashboardHoliday[];
+  subscription: DashboardSubscription | null;
+  subscriptionError?: string;
 }
 
 interface RelationName {
@@ -165,6 +185,13 @@ interface RawHoliday {
   reason: string | null;
 }
 
+interface RawSubscription {
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+}
+
 function firstRelation<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
@@ -191,7 +218,7 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     throw new Error(membershipError?.message || 'ไม่พบสิทธิ์ร้านค้าของบัญชีนี้');
   }
 
-  const [shopResult, bookingsResult, servicesResult, staffResult, schedulesResult, holidaysResult] = await Promise.all([
+  const [shopResult, bookingsResult, servicesResult, staffResult, schedulesResult, holidaysResult, subscriptionResult] = await Promise.all([
     supabase
       .from('shops')
       .select('id, name, slug, phone, address, promptpay_number, promptpay_name, line_oa_id')
@@ -239,6 +266,13 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       .eq('shop_id', membership.shop_id)
       .is('staff_id', null)
       .order('holiday_date', { ascending: true }),
+    membership.role === 'owner'
+      ? supabase
+        .from('subscriptions')
+        .select('plan, status, current_period_end, cancel_at_period_end')
+        .eq('shop_id', membership.shop_id)
+        .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (shopResult.error || !shopResult.data) {
@@ -259,6 +293,14 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
 
   if (schedulesResult.error) throw new Error(schedulesResult.error.message);
   if (holidaysResult.error) throw new Error(holidaysResult.error.message);
+
+  const rawSubscription = subscriptionResult.data as RawSubscription | null;
+  const subscription = rawSubscription ? {
+    plan: rawSubscription.plan,
+    status: rawSubscription.status,
+    currentPeriodEnd: rawSubscription.current_period_end,
+    cancelAtPeriodEnd: rawSubscription.cancel_at_period_end,
+  } satisfies DashboardSubscription : null;
 
   const rawSchedules = (schedulesResult.data ?? []) as RawSchedule[];
   const dashboardStaff = ((staffResult.data ?? []) as unknown as RawStaff[]).map((staffMember) => ({
@@ -345,6 +387,8 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
       date: holiday.holiday_date,
       reason: holiday.reason ?? 'วันหยุดพิเศษร้านค้า',
     })),
+    subscription,
+    subscriptionError: subscriptionResult.error ? 'ไม่สามารถโหลดข้อมูลสมาชิกได้' : undefined,
   };
 }
 

@@ -56,21 +56,33 @@ export default function BookingPage() {
   useEffect(() => {
     async function loadData() {
       setIsLoadingShop(true);
-      const shopData = await getShopBySlug(slug);
-      if (shopData) {
-        setShop(shopData);
-        const [servicesData, staffData, availabilityData] = await Promise.all([
-          getShopServices(shopData.id),
-          getShopStaff(shopData.id),
-          getShopAvailability(shopData.id),
-        ]);
-        setServices(servicesData);
-        setStaffList(staffData);
-        setStaffSchedules(availabilityData.schedules);
-        setShopHolidays(availabilityData.holidays);
-        if (servicesData.length > 0) setSelectedService(servicesData[0]);
+      try {
+        const shopData = await getShopBySlug(slug);
+        if (shopData) {
+          setShop(shopData);
+          // Do not request booking resources for a shop that the public profile
+          // explicitly marks as unavailable. The server-side RPC remains the
+          // enforcement boundary; this only keeps the customer flow truthful.
+          if (shopData.is_accepting_online_bookings === false) {
+            return;
+          }
+          const [servicesData, staffData, availabilityData] = await Promise.all([
+            getShopServices(shopData.id),
+            getShopStaff(shopData.id),
+            getShopAvailability(shopData.id),
+          ]);
+          setServices(servicesData);
+          setStaffList(staffData);
+          setStaffSchedules(availabilityData.schedules);
+          setShopHolidays(availabilityData.holidays);
+          if (servicesData.length > 0) setSelectedService(servicesData[0]);
+        }
+      } catch (error) {
+        console.error('Error loading booking page data:', error);
+        setShop(null);
+      } finally {
+        setIsLoadingShop(false);
       }
-      setIsLoadingShop(false);
     }
     loadData();
   }, [slug]);
@@ -99,7 +111,11 @@ export default function BookingPage() {
 
   const promptpayNumber = shop?.promptpay_number || '0812345678';
   const promptpayName = shop?.promptpay_name || shop?.name || 'ร้านค้าบริการ';
-  const shopPhone = shop?.phone || '081-234-5678';
+  const shopPhone = shop?.phone?.trim() || 'ไม่พบเบอร์ติดต่อร้าน';
+  const shopPhoneHref = shop?.phone?.trim()
+    ? `tel:${shop.phone.replace(/-/g, '')}`
+    : undefined;
+  const isBookingBlocked = shop?.is_accepting_online_bookings === false;
 
   const handleCopyPromptpay = () => {
     navigator.clipboard.writeText(promptpayNumber.replace(/-/g, ''));
@@ -178,6 +194,10 @@ export default function BookingPage() {
   );
 
   const handleCreateHold = async () => {
+    if (shop?.is_accepting_online_bookings === false) {
+      setErrorMessage('ร้านนี้ไม่รับจองคิวออนไลน์ในขณะนี้');
+      return;
+    }
     if (!shop || !selectedService || !customerName || !customerPhone) {
       setErrorMessage('กรุณากรอกชื่อและเบอร์โทรศัพท์ของผู้จองให้ครบถ้วน');
       return;
@@ -269,7 +289,7 @@ export default function BookingPage() {
           </div>
 
           <a
-            href={`tel:${shopPhone.replace(/-/g, '')}`}
+            href={shopPhoneHref}
             className="text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 font-semibold px-2.5 py-1 rounded-full border border-slate-700 flex items-center gap-1 transition-all"
             title="โทรสอบถามร้านค้า"
           >
@@ -288,7 +308,22 @@ export default function BookingPage() {
           </div>
         )}
 
-        {bookingSuccess ? (
+        {isBookingBlocked ? (
+          <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 text-center shadow-xl shadow-amber-950/40 space-y-3">
+            <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+              <CalendarOff className="w-7 h-7" />
+            </div>
+            <h2 className="text-lg font-bold text-white">ร้านนี้ไม่รับจองคิวออนไลน์ในขณะนี้</h2>
+            <p className="text-xs text-slate-400">กรุณาติดต่อร้านค้าโดยตรงหากต้องการสอบถามเพิ่มเติม</p>
+            <a
+              href={shopPhoneHref}
+              className="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 py-3 px-4 rounded-xl font-bold text-xs border border-slate-700 transition-all"
+            >
+              <Phone className="w-4 h-4 text-emerald-400" />
+              โทรสอบถามทางร้าน ({shopPhone})
+            </a>
+          </div>
+        ) : bookingSuccess ? (
           /* CONFIRMED OR PENDING REVIEW STATE (PRODUCT_RULES_V1 SECTION 1.4) */
           <div className={`bg-slate-900/90 rounded-2xl p-6 text-center shadow-xl animate-fade-in space-y-5 ${
             holdResult?.status === 'confirmed'
@@ -339,7 +374,7 @@ export default function BookingPage() {
                     ? 'ไม่ต้องชำระมัดจำ'
                     : `฿${holdResult?.deposit_amount ?? 0}.00 (ส่งสลิปแล้ว)`}
                 </span></p>
-                <p className="text-slate-400 pt-1">เบอร์สายตรงร้านค้า: <a href={`tel:${shopPhone.replace(/-/g, '')}`} className="font-mono font-bold text-amber-400 hover:underline">{shopPhone}</a></p>
+                <p className="text-slate-400 pt-1">เบอร์สายตรงร้านค้า: <a href={shopPhoneHref} className="font-mono font-bold text-amber-400 hover:underline">{shopPhone}</a></p>
               </div>
             </div>
 
@@ -359,7 +394,7 @@ export default function BookingPage() {
               </a>
 
               <a
-                href={`tel:${shopPhone.replace(/-/g, '')}`}
+                href={shopPhoneHref}
                 className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all"
               >
                 <Phone className="w-4 h-4 text-emerald-400" />

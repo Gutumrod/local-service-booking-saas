@@ -10,13 +10,13 @@ Multi-tenant Booking, Deposit & LINE Automation SaaS designed for Local Service 
 
 ---
 
-## 🟢 Status: Phase A-D Complete + Phase E1-E3.3 Complete, only E4 (Billing) left (2026-08-08)
+## 🟡 Status: Phase A-D + E1-E3.3 complete; Launch-1 billing implementation staged, live verification pending (2026-08-12)
 
 - ✅ **Supabase PostgreSQL Database Engine (`local_service` schema):** All migrations under `supabase/migrations/` applied and verified against the live project `gyleqrjdzwwlqierdwcy`. Atomic slot lock RPC `create_booking_hold` with 15-minute countdown, non-confusing booking code generator (`BK-XXXXXX`), 2-axis status audit triggers, and a real Postgres exclusion constraint (`prevent_overlapping_staff_bookings`) verified under concurrent load — see [`docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md`](docs/technical/PHASE_A_COMPLETION_REPORT_2026-08-07.md).
 - ✅ **LINE OA Webhook Gateway (`/api/line/webhook`):** Uses a server-only `SUPABASE_SERVICE_ROLE_KEY` admin client (Phase B) instead of the anon key RLS used to block silently. HMAC-SHA256 signature verification with `crypto.timingSafeEqual`, parses `ผูกคิว {booking_code}-{link_token}` commands, binds `line_users`, replies with LINE Flex Cards, and reports real per-event failures instead of a blanket `success:true`.
 - ✅ **Single Shared Environment Configuration (`.env.local`):** Master configuration at workspace root (`.env.local`) hardlinked to both `apps/booking-consumer` and `apps/booking-admin`.
 - ✅ **Consumer booking flow (`/book/[slug]`):** Connected to live Supabase backend and manually verified end-to-end (hold → deposit slip upload to Storage → status transitions), with fail-closed staff scheduling and a proper no-deposit success path (Phase C).
-- ✅ **Shop owner dashboard (`/dashboard`) — real Supabase Auth login + 5 of 6 tabs wired to live data.** Owners/admins/staff sign in via Supabase Auth (`/login`), `/register` provisions a real shop + owner membership atomically. Bookings, Services, Staff, Schedules/Holidays, and Settings tabs all load and mutate real tenant-scoped data through role-checked RPCs (owner/admin/staff enforced per `PRODUCT_RULES_V1.md` §7). Billing remains mock, tracked as Phase E4 in [`docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md`](docs/technical/BRIEF_PHASE2_HARDENING_A_TO_E.md).
+- 🟡 **Shop owner dashboard (`/dashboard`) — all 6 tabs are connected in source.** Billing now reads the owner-visible `subscriptions` record and sends checkout/portal actions to Stripe; its Launch-1 migration and live Stripe/browser verification are still pending. The other tabs load and mutate tenant-scoped data through role-checked RPCs (owner/admin/staff enforced per `PRODUCT_RULES_V1.md` §7).
 - ✅ **`shops` table column-exposure fix (Phase E3.3):** the table previously let any unauthenticated caller `select=*` and read `subscription_status`, `trial_ends_at`, `owner_name`, and other internal columns for any shop whose public slug they knew. Fixed with a column-limited `shop_public_profile` view for anon reads and an owner-only `update_shop_settings` RPC for writes — see [`docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md`](docs/technical/PHASE_E3_3_COMPLETION_REPORT_2026-08-08.md).
 
 ---
@@ -73,3 +73,21 @@ npm run dev:admin
 ### ⚠️ Required manual step on any fresh Supabase project
 
 After applying all migrations in `supabase/migrations/` to a new/fresh Supabase project, you **must** manually add `local_service` to **Exposed schemas**: Supabase Dashboard → Project Settings → API → Data API → Exposed schemas. This cannot be done via SQL, the Management API, or any known Supabase CLI/MCP tool — it is Dashboard-UI-only. Skipping this step makes every table/RPC call return `406 PGRST106: Invalid schema` even though the schema and RLS grants are otherwise correct. This bit the team once already (2026-08-07) before being diagnosed.
+
+### Stripe billing configuration and production cutover
+
+Keep these names in the root `.env.local` only; their values are server-only secrets or server configuration and must never be added to `NEXT_PUBLIC_*`, React components, screenshots, or git:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_BASIC`
+- `STRIPE_PRICE_PRO`
+
+Test mode and production use different keys, Price IDs, and webhook signing secrets. Verify the test-mode flow first. Before production, create the production Basic (฿490/month) and Pro (฿990/month) Prices, then set the matching production values.
+
+Register the production endpoint manually in Stripe Dashboard → Developers → Webhooks after the admin domain is final:
+
+1. Add `https://<admin-domain>/api/webhooks/stripe` as the endpoint URL.
+2. Select: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, and `invoice.payment_failed`.
+3. Put that endpoint's signing secret in `STRIPE_WEBHOOK_SECRET`, restart/redeploy the server, and send a Dashboard test event before accepting real payments.
+4. Apply pending Supabase migrations, including `20260811174537_launch_1_billing_truth_and_booking_gate.sql`, then complete the REST/browser checks in the Launch-1 completion report.

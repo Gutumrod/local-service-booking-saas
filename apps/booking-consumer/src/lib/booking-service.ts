@@ -11,6 +11,9 @@ export interface Shop {
   promptpay_name: string;
   require_deposit: boolean;
   default_deposit_amount: number;
+  // Public, non-sensitive booking eligibility flag from shop_public_profile.
+  // Billing status and the reason for any block remain server-side.
+  is_accepting_online_bookings?: boolean;
 }
 
 export interface Service {
@@ -165,6 +168,9 @@ export async function createBookingHold(params: CreateHoldParams): Promise<HoldR
 
   if (error) {
     console.error('Error in create_booking_hold RPC:', error);
+    if (error.message?.includes('SHOP_NOT_ACCEPTING_ONLINE_BOOKINGS')) {
+      throw new Error('ร้านนี้ไม่รับจองคิวออนไลน์ในขณะนี้');
+    }
     throw new Error(error.message || 'Failed to create booking hold');
   }
 
