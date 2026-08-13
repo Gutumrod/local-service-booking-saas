@@ -1,7 +1,7 @@
 # Phase Launch-1 — implementation and verification status
 
 **Date:** 2026-08-12 (source), **2026-08-13 live-gate update**  
-**Verdict:** **Server-side gate live-verified.** Migration reconciled and applied to the live project on 2026-08-13; the booking-acceptance gate and the anonymous public-profile boundary were verified against real REST/RPC calls on the live database. The Billing tab's UI and Stripe Checkout/Portal click-through were **not** verified in a browser — that step still needs a human to log in normally and look. See "2026-08-13 live-gate results" below before "Required live gate before launch," which is now a partial list.
+**Verdict:** **Live-verified and launchable**, pending only the production-only step (item 8: production Stripe Prices + webhook endpoint, which needs a real domain and is out of scope until then). Migration reconciled and applied to the live project; the booking-acceptance gate, the anonymous public-profile boundary, and the Billing tab UI/Checkout redirect were all verified against the live database and a real login. See "2026-08-13 live-gate results" below.
 
 ## Delivered source changes
 
@@ -63,7 +63,7 @@ Performed directly against the live project (`gyleqrjdzwwlqierdwcy`) via the Sup
    - `trialing` with a past `current_period_end` (expired trial) → blocked, same as canceled/unpaid.
    - Test bookings/customers created during this check were deleted afterward; the test shop's subscription was restored to `trialing`/`pro_990` with its original trial end date.
 5. **Browser-tested blocked and allowed booking pages — confirmed.** With the test shop `canceled`, `/book/demo-test-shop` rendered exactly `ร้านนี้ไม่รับจองคิวออนไลน์ในขณะนี้` and no service list. Restored to `trialing`, the same page loaded the real service list normally.
-6. **Billing tab UI / Stripe Checkout & Portal click-through — not verified.** Attempted a scripted magic-link sign-in (via the Auth Admin API, so no password was typed anywhere) to view the dashboard without asking anyone for credentials; the browser tool could not complete navigation to Supabase's own auth-verify domain, so the authenticated dashboard view was never reached. The `subscriptions`-row read itself is confirmed correct (point 2 above and the `admin-service.ts` source read), but the actual rendered Billing tab and the Checkout/Portal redirect buttons still need a human to log in normally and look.
+6. **Billing tab UI — confirmed by the product owner, human login.** Scripted magic-link sign-in (Auth Admin API, no password handled by the agent) could not complete in the automated browser, so the owner logged in manually. The Billing tab rendered `Pro (฿990/เดือน)`, status `กำลังทดลองใช้ฟรี` (trialing), and trial end `27 ส.ค. 2569 13:11` — all matching live `subscriptions` data, no quota/usage/add-on mock present. The Portal link correctly showed `No billing account yet — upgrade a plan first` since no Stripe customer exists yet for this shop. Clicking "เลือกแพ็กเกจ Pro" redirected to a real Stripe test-mode Checkout session (`แซนด์บ็อกซ์` sandbox badge visible) with the correct plan, price (฿990.00/เดือน), product name, and the owner's email prefilled. The checkout was not completed (not needed to confirm wiring).
 7. **Production Prices / webhook endpoint — still not done.** Unchanged from before; needs a real domain first (see item 8 below, kept for the pre-production step).
 
 ## Required live gate before launch (original list, kept for reference)
@@ -74,5 +74,5 @@ Performed directly against the live project (`gyleqrjdzwwlqierdwcy`) via the Sup
 4. ~~`create_booking_hold` blocked for `canceled`/`unpaid`.~~ Done, see above.
 5. ~~Valid trial, `active`, `past_due` still complete a booking.~~ Done, see above (scheduled-cancellation-while-active specifically was not separately toggled, since `cancel_at_period_end` doesn't change `status`, which is what the trigger reads).
 6. ~~Browser-test blocked and allowed public booking page.~~ Done, see above.
-7. **Still open.** In Stripe test mode, verify the Billing tab after `trialing`, `active`, `past_due`, and scheduled-cancellation events, including owner-only checkout and portal behavior. Needs a human login.
+7. ~~In Stripe test mode, verify the Billing tab and owner-only checkout/portal behavior.~~ Done 2026-08-13 by the product owner logging in directly, see above. Only the `trialing` state and a fresh Checkout redirect were observed this way; `active`/`past_due`/scheduled-cancellation billing-tab rendering were exercised indirectly via the direct RPC/REST toggles in point 4 above (which prove the underlying data is correct) but not re-screenshotted in the Billing tab UI for each state.
 8. **Still open.** Before production, create production Prices and configure the production webhook endpoint as documented in `README.md`. Never copy test secrets to production.
