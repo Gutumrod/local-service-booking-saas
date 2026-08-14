@@ -37,8 +37,8 @@ function LoginForm() {
     <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-5">
         <div>
-          <h1 className="text-xl font-bold text-white">เข้าสู่ระบบเจ้าของร้าน</h1>
-          <p className="mt-1 text-xs text-slate-400">ใช้อีเมลและรหัสผ่านที่ลงทะเบียนไว้</p>
+          <h1 className="text-xl font-bold text-white">เข้าสู่ระบบ</h1>
+          <p className="mt-1 text-xs text-slate-400">สำหรับเจ้าของร้านค้าและผู้ดูแลระบบ ใช้อีเมลและรหัสผ่านที่ลงทะเบียนไว้</p>
         </div>
 
         {errorMessage && (
