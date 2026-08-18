@@ -265,6 +265,10 @@ blacklist มีผลเฉพาะร้านนั้น ไม่ข้า
 | แก้ตารางเวลาคนอื่น | ✅ | ✅ | ❌ |
 | ตั้งค่าร้าน / PromptPay | ✅ | ❌ | ❌ |
 | จัดการแพ็กเกจและการชำระเงิน | ✅ | ❌ | ❌ |
+| สร้าง ticket | ✅ | ✅ | ✅ |
+| ดู/อัปเดตสถานะ ticket | ✅ | ✅ | ✅ |
+| ดูตัวอย่าง retention cleanup (ticket) | ✅ | ✅ | ❌ |
+| ลบ ticket ที่ปิดแล้ว (retention cleanup) | ✅ | ✅ | ❌ |
 
 ต้องมี helper สามตัวแยกกัน: `is_shop_member()`, `has_shop_role(roles[])`, `is_shop_owner()`
 
@@ -278,6 +282,8 @@ blacklist มีผลเฉพาะร้านนั้น ไม่ข้า
 4. **กันจองซ้อนต้องอยู่ที่ชั้น database** ด้วย exclusion constraint บนช่วงเวลาของช่าง ไม่ใช่การเช็คแล้วค่อย insert
 5. **Rate limit** การสร้าง hold: 5 ครั้ง/เบอร์/ชั่วโมง และ 30 ครั้ง/IP/ชั่วโมง
 6. ราคา ยอดมัดจำ เวลาสิ้นสุด และรหัสจอง คำนวณที่ server ทั้งหมด
+
+ระบบ tickets ใช้แพทเทิร์นเดียวกับข้อ 1 (ไม่มีการเขียนตรงจาก client ทุกอย่างทำงานผ่าน RPC functions: `create_ticket`, `update_ticket_status`, `add_ticket_timeline_entry`, `preview_ticket_retention`, `delete_closed_tickets_before`) เช่นเดียวกับทุกโดเมนในระบบ
 
 ---
 

@@ -543,6 +543,12 @@ export default function AdminDashboard() {
             >
               แพ็กเกจชำระเงิน
             </button>
+            <a
+              href="/dashboard/tickets"
+              className="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-white"
+            >
+              Tickets
+            </a>
           </nav>
         </div>
       </header>
