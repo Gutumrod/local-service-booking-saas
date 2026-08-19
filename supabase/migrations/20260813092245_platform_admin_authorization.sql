@@ -42,8 +42,8 @@ CREATE TYPE local_service.platform_admin_shop_row AS (
     requested_plan VARCHAR,
     is_active BOOLEAN,
     created_at TIMESTAMPTZ,
-    subscription_plan VARCHAR,
-    subscription_status VARCHAR,
+    subscription_plan TEXT,
+    subscription_status TEXT,
     current_period_end TIMESTAMPTZ,
     cancel_at_period_end BOOLEAN
 );

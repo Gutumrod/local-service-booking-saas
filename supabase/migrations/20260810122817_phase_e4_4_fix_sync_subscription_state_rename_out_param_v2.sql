@@ -1,28 +1,3 @@
--- Phase E4.4 fix: sync_subscription_state's RETURNS TABLE(applied BOOLEAN, shop_id UUID)
--- declared an OUT parameter named `shop_id`, which PL/pgSQL implicitly treats as an
--- in-scope variable for the whole function body. Every bare `shop_id` reference in
--- embedded SQL (a lookup SELECT, the out-of-order-guard SELECT, and the
--- ON CONFLICT (shop_id) clause) collided with that variable and raised
--- "column reference \"shop_id\" is ambiguous" at execution time -- not at CREATE
--- FUNCTION time, since PL/pgSQL only validates each embedded SQL statement lazily
--- on first execution of that line. CREATE FUNCTION succeeded cleanly and the
--- migration in 20260810000100 looked correct on review; the bug only surfaced when
--- actually invoked, first via live `stripe trigger` testing (every handled event
--- type failed), then confirmed via direct RPC calls against the real seeded
--- "Good Cuts Barber" shop (2026-08-10).
---
--- Fix: rename the OUT parameter to `matched_shop_id` so no name collision with the
--- `subscriptions.shop_id` column can exist anywhere in the function body. Requires
--- DROP + CREATE (not CREATE OR REPLACE) because the RETURNS TABLE column set
--- changed. Return shape is now (applied, matched_shop_id); the webhook route only
--- ever reads `applied`, so this has no behavior impact on the caller.
---
--- Re-verified end-to-end after this fix: all 5 event types (checkout.session.completed,
--- customer.subscription.updated, customer.subscription.deleted, invoice.paid,
--- invoice.payment_failed) write local_service.subscriptions AND sync
--- local_service.shops.subscription_status correctly against a real shop, and the
--- out-of-order guard correctly rejects a stale event without touching the row.
-
 DROP FUNCTION IF EXISTS local_service.sync_subscription_state(
     TEXT, BIGINT, UUID, TEXT, TEXT, TEXT, TEXT, BIGINT, BOOLEAN
 );

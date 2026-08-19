@@ -1,26 +1,28 @@
--- Backfill: this fix was applied directly to the live database on 2026-08-10
--- (remote version 20260810122817) without a matching local migration file.
--- Reconstructed verbatim from the live function definition via
--- pg_get_functiondef so the repository is the accurate source of truth.
--- Purely additive (CREATE OR REPLACE of an existing function) and already
--- live; this file documents it rather than changing production state.
+-- Phase E4.4 fix: sync_subscription_state had two bare `shop_id` references that
+-- were ambiguous against the function's own RETURNS TABLE(..., shop_id UUID) OUT
+-- parameter, which PL/pgSQL implicitly declares as an in-scope variable. Found via
+-- live `stripe trigger` testing (2026-08-10) -- every handled event type failed
+-- with "column reference \"shop_id\" is ambiguous" despite the function compiling
+-- and CREATE FUNCTION succeeding cleanly (PL/pgSQL only validates each embedded
+-- SQL statement lazily on first execution, not at CREATE time).
+-- Fix: qualify both bare references with the `subscriptions` table name.
 
 CREATE OR REPLACE FUNCTION local_service.sync_subscription_state(
-    p_event_type TEXT,
-    p_event_created BIGINT,
-    p_shop_id UUID,
-    p_stripe_customer_id TEXT,
+    p_event_type             TEXT,
+    p_event_created          BIGINT,
+    p_shop_id                UUID,
+    p_stripe_customer_id     TEXT,
     p_stripe_subscription_id TEXT,
-    p_plan TEXT DEFAULT NULL,
-    p_status TEXT DEFAULT NULL,
-    p_current_period_end BIGINT DEFAULT NULL,
-    p_cancel_at_period_end BOOLEAN DEFAULT NULL
+    p_plan                   TEXT DEFAULT NULL,
+    p_status                 TEXT DEFAULT NULL,
+    p_current_period_end     BIGINT DEFAULT NULL,
+    p_cancel_at_period_end   BOOLEAN DEFAULT NULL
 )
-RETURNS TABLE(applied BOOLEAN, matched_shop_id UUID)
+RETURNS TABLE(applied BOOLEAN, shop_id UUID)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, local_service
-AS $function$
+AS $$
 DECLARE
     v_target_shop_id    UUID;
     v_current_updated_at TIMESTAMPTZ;
@@ -42,6 +44,7 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Out-of-order guard: skip if the event is older than the current DB state.
     SELECT subscriptions.updated_at INTO v_current_updated_at
       FROM local_service.subscriptions
      WHERE subscriptions.shop_id = v_target_shop_id
@@ -149,4 +152,12 @@ BEGIN
 
     RETURN QUERY SELECT true, v_target_shop_id;
 END;
-$function$;
+$$;
+
+REVOKE ALL ON FUNCTION local_service.sync_subscription_state(
+    TEXT, BIGINT, UUID, TEXT, TEXT, TEXT, TEXT, BIGINT, BOOLEAN
+) FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION local_service.sync_subscription_state(
+    TEXT, BIGINT, UUID, TEXT, TEXT, TEXT, TEXT, BIGINT, BOOLEAN
+) TO service_role;
