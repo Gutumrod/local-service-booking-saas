@@ -2,9 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Store, Mail, ArrowLeft, Send, CheckCircle2, Sparkles, KeyRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Mail, ArrowLeft, Send, CheckCircle2, KeyRound } from 'lucide-react';
+import { LanguageToggle } from '@/components/language-toggle';
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations('auth');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -19,15 +22,19 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
+    <div className="relative min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
+
       <div className="max-w-md w-full space-y-6">
         {/* Top Logo */}
         <div className="text-center space-y-2">
           <div className="w-14 h-14 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/40 shadow-xl">
             <KeyRound className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-extrabold text-white mt-3">กู้คืนรหัสผ่านร้านค้า</h1>
-          <p className="text-xs text-slate-400">กรอกอีเมลที่ใช้ลงทะเบียน ระบบจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปที่อีเมลของคุณ</p>
+          <h1 className="text-2xl font-extrabold text-white mt-3">{t('forgotTitle')}</h1>
+          <p className="text-xs text-slate-400">{t('forgotSubtitle')}</p>
         </div>
 
         {/* Card Form */}
@@ -37,23 +44,23 @@ export default function ForgotPasswordPage() {
               <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/40">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h2 className="text-base font-bold text-white">ส่งลิงก์รีเซ็ตรหัสผ่านเรียบร้อยแล้ว! 🎉</h2>
+              <h2 className="text-base font-bold text-white">{t('forgotSuccessTitle')}</h2>
               <p className="text-xs text-slate-400 leading-relaxed">
-                ระบบได้ส่งคำขอตั้งรหัสผ่านใหม่ไปที่ <strong className="text-emerald-400 font-mono">{email}</strong> แล้ว โปรดตรวจสอบกล่องข้อความในอีเมลของคุณ
+                {t('forgotSuccessBody', { email })}
               </p>
               <div className="pt-2">
                 <Link
-                  href="/"
+                  href="/login"
                   className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:underline font-semibold"
                 >
-                  <ArrowLeft className="w-4 h-4" /> กลับสู่หน้าเข้าสู่ระบบ
+                  <ArrowLeft className="w-4 h-4" /> {t('backToLogin')}
                 </Link>
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">อีเมลสำหรับล็อกอิน *</label>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">{t('ownerEmailLabel')}</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                   <input
@@ -73,11 +80,11 @@ export default function ForgotPasswordPage() {
                 className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-950/40 transition-all disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  'กำลังส่งคำขอ...'
+                  t('forgotSubmitting')
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    ส่งลิงก์กู้คืนรหัสผ่าน
+                    {t('forgotSubmit')}
                   </>
                 )}
               </button>
@@ -87,7 +94,7 @@ export default function ForgotPasswordPage() {
                   href="/"
                   className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-all"
                 >
-                  <ArrowLeft className="w-4 h-4" /> ย้อนกลับหน้าแรก
+                  <ArrowLeft className="w-4 h-4" /> {t('backHome')}
                 </Link>
               </div>
             </form>

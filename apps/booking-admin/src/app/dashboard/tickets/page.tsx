@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
   fetchTickets,
   getCurrentShopMembership,
@@ -11,9 +12,6 @@ import {
 import {
   defaultRetentionCutoff,
   isOverdue,
-  STATUS_LABELS,
-  TICKET_TYPE_LABELS,
-  PRIORITY_LABELS,
   type Priority,
   type RetentionCandidate,
   type Status,
@@ -21,18 +19,18 @@ import {
   type TicketSearchFilters,
   type TicketType,
 } from '@/lib/ticket-domain';
+import { useFormatDateTime, useTicketLabels } from '@/i18n/ticket-i18n';
+import { LanguageToggle } from '@/components/language-toggle';
 import {
   Search,
   Plus,
   ArrowLeft,
-  Filter,
   AlertTriangle,
   Clock,
   Trash2,
   X,
   CheckCircle2,
   RefreshCw,
-  Calendar,
   Phone,
   User,
   Tag,
@@ -58,20 +56,6 @@ const TYPE_LIST: TicketType[] = [
   'RefundRequest',
   'Other',
 ];
-
-function formatDateTime(isoString: string | null | undefined): string {
-  if (!isoString) return '-';
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('th-TH', {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
 
 function getStatusBadge(status: Status) {
   switch (status) {
@@ -108,6 +92,10 @@ function getPriorityBadge(priority: Priority) {
 }
 
 export default function TicketsHistoryPage() {
+  const t = useTranslations('tickets');
+  const { STATUS_LABELS, PRIORITY_LABELS, TICKET_TYPE_LABELS } = useTicketLabels();
+  const formatDateTime = useFormatDateTime();
+
   const [shopId, setShopId] = useState<string>('');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,11 +144,11 @@ export default function TicketsHistoryPage() {
       const data = await fetchTickets(activeShopId, filters);
       setTickets(data);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'โหลดข้อมูลเคสไม่สำเร็จ');
+      setErrorMessage(err instanceof Error ? err.message : t('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [shopId, searchQuery, selectedStatus, selectedType, receivedFrom, receivedTo, overdueOnly]);
+  }, [shopId, searchQuery, selectedStatus, selectedType, receivedFrom, receivedTo, overdueOnly, t]);
 
   useEffect(() => {
     loadTickets();
@@ -186,7 +174,7 @@ export default function TicketsHistoryPage() {
     } catch (err) {
       setRetentionFeedback({
         kind: 'err',
-        text: err instanceof Error ? err.message : 'ตรวจสอบรายการไม่สำเร็จ',
+        text: err instanceof Error ? err.message : t('retentionCheckFailed'),
       });
     } finally {
       setIsRetentionPreviewing(false);
@@ -201,11 +189,11 @@ export default function TicketsHistoryPage() {
     try {
       const result = await deleteClosedTicketsBefore(shopId, retentionCutoff);
       if (!result.ok) {
-        setRetentionFeedback({ kind: 'err', text: result.error || 'ลบข้อมูลไม่สำเร็จ' });
+        setRetentionFeedback({ kind: 'err', text: result.error || t('retentionDeleteFailed') });
       } else {
         setRetentionFeedback({
           kind: 'ok',
-          text: `ล้างข้อมูลสำเร็จแล้ว จำนวน ${result.deletedCount} รายการ`,
+          text: t('retentionDone', { count: result.deletedCount }),
         });
         setRetentionCandidates([]);
         setDeleteConfirmationOpen(false);
@@ -215,7 +203,7 @@ export default function TicketsHistoryPage() {
     } catch (err) {
       setRetentionFeedback({
         kind: 'err',
-        text: err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบข้อมูล',
+        text: err instanceof Error ? err.message : t('retentionGenericFailed'),
       });
     } finally {
       setIsDeleting(false);
@@ -231,19 +219,19 @@ export default function TicketsHistoryPage() {
             <Link
               href="/dashboard"
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-              title="กลับหน้าแดชบอร์ดหลัก"
+              title={t('backToDashboard')}
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-lg text-white">ระบบจัดการเคส & เคลมบริการ (Tickets)</h1>
+                <h1 className="font-bold text-lg text-white">{t('listTitle')}</h1>
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {tickets.length} รายการ
+                  {t('listCount', { count: tickets.length })}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                ประวัติเคส ปัญหาบริการ นัดตรวจซ้ำ และการเคลมสินค้า
+                {t('listSubtitle')}
               </p>
             </div>
           </div>
@@ -258,7 +246,7 @@ export default function TicketsHistoryPage() {
               className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
             >
               <Trash2 className="w-4 h-4 text-rose-400" />
-              ล้างข้อมูลเคสเก่า (Retention)
+              {t('retentionBtn')}
             </button>
 
             <Link
@@ -266,8 +254,10 @@ export default function TicketsHistoryPage() {
               className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all"
             >
               <Plus className="w-4 h-4" />
-              รับเคสใหม่ (New Ticket)
+              {t('newTicketBtn')}
             </Link>
+
+            <LanguageToggle />
           </div>
         </div>
       </header>
@@ -289,7 +279,7 @@ export default function TicketsHistoryPage() {
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="ค้นหาด้วย เลขเคส, ชื่อลูกค้า, เบอร์โทร หรือหัวข้อ..."
+                placeholder={t('searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
@@ -310,7 +300,7 @@ export default function TicketsHistoryPage() {
               onChange={(e) => setSelectedStatus(e.target.value as Status | '')}
               className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
             >
-              <option value="">ทุกสถานะ (All Statuses)</option>
+              <option value="">{t('allStatuses')}</option>
               {STATUS_LIST.map((st) => (
                 <option key={st} value={st}>
                   {STATUS_LABELS[st]}
@@ -324,7 +314,7 @@ export default function TicketsHistoryPage() {
               onChange={(e) => setSelectedType(e.target.value as TicketType | '')}
               className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
             >
-              <option value="">ทุกประเภทเคส (All Types)</option>
+              <option value="">{t('allTypes')}</option>
               {TYPE_LIST.map((tp) => (
                 <option key={tp} value={tp}>
                   {TICKET_TYPE_LABELS[tp]}
@@ -334,7 +324,7 @@ export default function TicketsHistoryPage() {
 
             {/* Date From */}
             <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-300">
-              <span className="text-[11px] text-slate-500">ตั้งแต่:</span>
+              <span className="text-[11px] text-slate-500">{t('dateFrom')}</span>
               <input
                 type="date"
                 value={receivedFrom}
@@ -345,7 +335,7 @@ export default function TicketsHistoryPage() {
 
             {/* Date To */}
             <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-300">
-              <span className="text-[11px] text-slate-500">ถึง:</span>
+              <span className="text-[11px] text-slate-500">{t('dateTo')}</span>
               <input
                 type="date"
                 value={receivedTo}
@@ -364,7 +354,7 @@ export default function TicketsHistoryPage() {
               />
               <span className="flex items-center gap-1 text-rose-400 font-medium">
                 <Clock className="w-3.5 h-3.5" />
-                เฉพาะเคสเกินกำหนด (Overdue)
+                {t('overdueOnly')}
               </span>
             </label>
 
@@ -374,14 +364,14 @@ export default function TicketsHistoryPage() {
                 onClick={handleClearFilters}
                 className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
               >
-                ล้างตัวกรอง
+                {t('clearFilters')}
               </button>
             )}
 
             <button
               onClick={() => loadTickets()}
               className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-              title="รีเฟรชข้อมูล"
+              title={t('refreshTitle')}
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -393,16 +383,16 @@ export default function TicketsHistoryPage() {
           {isLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
               <RefreshCw className="w-8 h-8 animate-spin text-emerald-400" />
-              <p className="text-sm">กำลังโหลดข้อมูลเคส...</p>
+              <p className="text-sm">{t('loadingTickets')}</p>
             </div>
           ) : tickets.length === 0 ? (
             <div className="py-20 px-6 flex flex-col items-center justify-center text-center">
               <div className="w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 mb-4">
                 <Tag className="w-7 h-7" />
               </div>
-              <h3 className="text-base font-bold text-white mb-1">ไม่พบรายการเคสที่ตรงกับเงื่อนไข</h3>
+              <h3 className="text-base font-bold text-white mb-1">{t('noMatchingTickets')}</h3>
               <p className="text-xs text-slate-400 max-w-sm mb-6">
-                ยังไม่มีการบันทึกเคสในร้าน หรือไม่มีรายการที่ตรงกับคำค้นหาและตัวกรองที่เลือก
+                {t('noMatchingSubtitle')}
               </p>
               <div className="flex gap-3">
                 {(searchQuery || selectedStatus || selectedType || receivedFrom || receivedTo || overdueOnly) && (
@@ -410,14 +400,14 @@ export default function TicketsHistoryPage() {
                     onClick={handleClearFilters}
                     className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition-colors"
                   >
-                    ล้างตัวกรองทั้งหมด
+                    {t('clearAllFilters')}
                   </button>
                 )}
                 <Link
                   href="/dashboard/tickets/new"
                   className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all"
                 >
-                  + รับเคสใหม่ทันที
+                  {t('newTicketNow')}
                 </Link>
               </div>
             </div>
@@ -426,36 +416,36 @@ export default function TicketsHistoryPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 font-semibold">
-                    <th className="py-3.5 px-4">เคส / ประเภท</th>
-                    <th className="py-3.5 px-4">ลูกค้า</th>
-                    <th className="py-3.5 px-4">สถานะ</th>
-                    <th className="py-3.5 px-4">ความสำคัญ</th>
-                    <th className="py-3.5 px-4">วันที่รับเรื่อง</th>
-                    <th className="py-3.5 px-4">วันครบกำหนด</th>
-                    <th className="py-3.5 px-4">ผู้รับผิดชอบ</th>
-                    <th className="py-3.5 px-4 text-right">ดำเนินการ</th>
+                    <th className="py-3.5 px-4">{t('thCaseType')}</th>
+                    <th className="py-3.5 px-4">{t('thCustomer')}</th>
+                    <th className="py-3.5 px-4">{t('thStatus')}</th>
+                    <th className="py-3.5 px-4">{t('thPriority')}</th>
+                    <th className="py-3.5 px-4">{t('thReceivedDate')}</th>
+                    <th className="py-3.5 px-4">{t('thDueDate')}</th>
+                    <th className="py-3.5 px-4">{t('thAssignee')}</th>
+                    <th className="py-3.5 px-4 text-right">{t('thAction')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {tickets.map((t) => {
-                    const overdue = isOverdue(t);
+                  {tickets.map((ticketItem) => {
+                    const overdue = isOverdue(ticketItem);
                     return (
                       <tr
-                        key={t.id}
+                        key={ticketItem.id}
                         className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
                       >
                         {/* Ticket ID & Type */}
                         <td className="py-3.5 px-4">
-                          <Link href={`/dashboard/tickets/${t.id}`} className="block">
+                          <Link href={`/dashboard/tickets/${ticketItem.id}`} className="block">
                             <div className="font-bold text-white group-hover:text-emerald-400 transition-colors text-sm">
-                              {t.title}
+                              {ticketItem.title}
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-[11px] font-mono text-slate-400">
-                                {t.id.slice(0, 8)}...
+                                {ticketItem.id.slice(0, 8)}...
                               </span>
                               <span className="text-[10px] text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
-                                {TICKET_TYPE_LABELS[t.type]}
+                                {TICKET_TYPE_LABELS[ticketItem.type]}
                               </span>
                             </div>
                           </Link>
@@ -463,10 +453,10 @@ export default function TicketsHistoryPage() {
 
                         {/* Customer */}
                         <td className="py-3.5 px-4">
-                          <div className="font-medium text-slate-200">{t.customer.name}</div>
+                          <div className="font-medium text-slate-200">{ticketItem.customer.name}</div>
                           <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                             <Phone className="w-3 h-3 text-slate-500" />
-                            {t.customer.phone}
+                            {ticketItem.customer.phone}
                           </div>
                         </td>
 
@@ -475,15 +465,15 @@ export default function TicketsHistoryPage() {
                           <div className="flex flex-col items-start gap-1">
                             <span
                               className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${getStatusBadge(
-                                t.status
+                                ticketItem.status
                               )}`}
                             >
-                              {STATUS_LABELS[t.status]}
+                              {STATUS_LABELS[ticketItem.status]}
                             </span>
                             {overdue && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                เกินกำหนด
+                                {t('overdueBadge')}
                               </span>
                             )}
                           </div>
@@ -493,16 +483,16 @@ export default function TicketsHistoryPage() {
                         <td className="py-3.5 px-4">
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${getPriorityBadge(
-                              t.priority
+                              ticketItem.priority
                             )}`}
                           >
-                            {PRIORITY_LABELS[t.priority]}
+                            {PRIORITY_LABELS[ticketItem.priority]}
                           </span>
                         </td>
 
                         {/* Received At */}
                         <td className="py-3.5 px-4 text-slate-300">
-                          {formatDateTime(t.receivedAt)}
+                          {formatDateTime(ticketItem.receivedAt)}
                         </td>
 
                         {/* Due At */}
@@ -510,29 +500,28 @@ export default function TicketsHistoryPage() {
                           <span
                             className={overdue ? 'text-rose-400 font-semibold' : 'text-slate-300'}
                           >
-                            {formatDateTime(t.dueAt)}
+                            {formatDateTime(ticketItem.dueAt)}
                           </span>
                         </td>
 
                         {/* Assignee */}
                         <td className="py-3.5 px-4 text-slate-300">
-                          {t.assignedTo ? (
+                          {ticketItem.assignedTo ? (
                             <span className="flex items-center gap-1.5">
                               <User className="w-3.5 h-3.5 text-slate-400" />
-                              {t.assignedTo}
+                              {ticketItem.assignedTo}
                             </span>
                           ) : (
-                            <span className="text-slate-500 italic">ยังไม่มอบหมาย</span>
+                            <span className="text-slate-500 italic">-</span>
                           )}
                         </td>
 
                         {/* Action Link */}
                         <td className="py-3.5 px-4 text-right">
                           <Link
-                            href={`/dashboard/tickets/${t.id}`}
+                            href={`/dashboard/tickets/${ticketItem.id}`}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-medium text-xs transition-colors"
                           >
-                            ดูรายละเอียด
                             <ChevronRight className="w-3.5 h-3.5" />
                           </Link>
                         </td>

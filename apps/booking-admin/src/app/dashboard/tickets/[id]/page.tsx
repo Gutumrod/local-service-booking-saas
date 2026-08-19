@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   fetchTicketById,
   updateTicketStatus,
@@ -15,78 +16,42 @@ import {
   getCurrentShopMembership,
 } from '@/lib/ticket-service';
 import {
-  canTransition,
-  getTransitionError,
   isOverdue,
-  STATUS_LABELS,
-  PRIORITY_LABELS,
-  TICKET_TYPE_LABELS,
   ALLOWED_TRANSITIONS,
   type Priority,
   type Status,
   type Ticket,
-  type TicketType,
-  type TimelineEntry,
   type TimelineEventType,
   type Attachment,
 } from '@/lib/ticket-domain';
+import { useFormatDateTime, useTicketLabels } from '@/i18n/ticket-i18n';
+import { LanguageToggle } from '@/components/language-toggle';
 import {
   ArrowLeft,
   Clock,
-  Calendar,
   AlertTriangle,
   CheckCircle2,
   User,
   Phone,
-  Tag,
   MessageSquare,
   Send,
-  ShieldAlert,
   Check,
-  Edit3,
   Save,
   RefreshCw,
   Paperclip,
   ChevronRight,
   FileText,
   Activity,
-  AlertCircle,
   Sparkles,
   X,
   Plus,
   Copy,
-  ExternalLink,
   ShieldCheck,
   RotateCcw,
   CheckCircle,
 } from 'lucide-react';
 
-const STATUS_LIST: Status[] = [
-  'New',
-  'Acknowledged',
-  'InReview',
-  'WaitingForCustomer',
-  'RecheckScheduled',
-  'Resolved',
-  'Closed',
-  'Reopened',
-];
-
 const PRIORITIES: Priority[] = ['Low', 'Medium', 'High'];
-
-function formatDateTime(isoString: string | null | undefined): string {
-  if (!isoString) return '-';
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('th-TH', {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
 
 function getStatusBadge(status: Status) {
   switch (status) {
@@ -146,6 +111,10 @@ function getTimelineEventIcon(eventType: TimelineEventType) {
 }
 
 export default function TicketDetailPage() {
+  const t = useTranslations('tickets');
+  const { STATUS_LABELS, PRIORITY_LABELS, TICKET_TYPE_LABELS } = useTicketLabels();
+  const formatDateTime = useFormatDateTime();
+
   const router = useRouter();
   const routeParams = useParams();
   const rawId = routeParams?.id;
@@ -204,11 +173,11 @@ export default function TicketDetailPage() {
         setResolutionInput(data.resolution || '');
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'โหลดข้อมูลเคสไม่สำเร็จ');
+      setActionError(err instanceof Error ? err.message : t('loadFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [shopId, ticketId]);
+  }, [shopId, ticketId, t]);
 
   useEffect(() => {
     loadTicketData();
@@ -249,9 +218,9 @@ export default function TicketDetailPage() {
       }
 
       if (!result.ok) {
-        setActionError(result.error || 'เปลี่ยนสถานะไม่สำเร็จ');
+        setActionError(result.error || t('statusChangeFailed'));
       } else {
-        setActionSuccess(`เปลี่ยนสถานะเป็น "${STATUS_LABELS[targetStatus]}" สำเร็จแล้ว`);
+        setActionSuccess(t('statusChanged', { label: STATUS_LABELS[targetStatus] }));
         if (result.ticket) {
           setTicket(result.ticket);
         } else {
@@ -259,7 +228,7 @@ export default function TicketDetailPage() {
         }
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ');
+      setActionError(err instanceof Error ? err.message : t('statusChangeFailed'));
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -276,9 +245,9 @@ export default function TicketDetailPage() {
     try {
       const result = await updateTicketPriority(shopId, ticket.id, newPriority);
       if (!result.ok) {
-        setActionError(result.error || 'เปลี่ยนระดับความสำคัญไม่สำเร็จ');
+        setActionError(result.error || t('priorityChangeFailed'));
       } else {
-        setActionSuccess(`เปลี่ยนระดับความสำคัญเป็น "${PRIORITY_LABELS[newPriority]}" สำเร็จแล้ว`);
+        setActionSuccess(t('priorityChanged', { label: PRIORITY_LABELS[newPriority] }));
         setSelectedPriority(newPriority);
         if (result.ticket) {
           setTicket(result.ticket);
@@ -287,7 +256,7 @@ export default function TicketDetailPage() {
         }
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเปลี่ยนความสำคัญ');
+      setActionError(err instanceof Error ? err.message : t('priorityChangeFailed'));
     } finally {
       setIsUpdatingPriority(false);
     }
@@ -305,12 +274,12 @@ export default function TicketDetailPage() {
     try {
       const result = await updateTicketAssignee(shopId, ticket.id, assigneeInput.trim() || null);
       if (!result.ok) {
-        setActionError(result.error || 'เปลี่ยนผู้รับผิดชอบไม่สำเร็จ');
+        setActionError(result.error || t('assigneeChangeFailed'));
       } else {
         setActionSuccess(
           assigneeInput.trim()
-            ? `มอบหมายงานให้ "${assigneeInput.trim()}" สำเร็จแล้ว`
-            : 'ยกเลิกการมอบหมายงานสำเร็จแล้ว'
+            ? t('assigneeSet', { name: assigneeInput.trim() })
+            : t('assigneeCleared')
         );
         if (result.ticket) {
           setTicket(result.ticket);
@@ -319,7 +288,7 @@ export default function TicketDetailPage() {
         }
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการอัปเดตผู้รับผิดชอบ');
+      setActionError(err instanceof Error ? err.message : t('assigneeChangeFailed'));
     } finally {
       setIsUpdatingAssignee(false);
     }
@@ -331,7 +300,7 @@ export default function TicketDetailPage() {
     if (!ticket || !shopId) return;
 
     if (!resolutionInput.trim()) {
-      setActionError('กรุณากรอกรายละเอียดผลการแก้ไข (Resolution)');
+      setActionError(t('resolutionRequired'));
       return;
     }
 
@@ -342,9 +311,9 @@ export default function TicketDetailPage() {
     try {
       const result = await saveTicketResolution(shopId, ticket.id, resolutionInput.trim());
       if (!result.ok) {
-        setActionError(result.error || 'บันทึกผลการแก้ไขไม่สำเร็จ');
+        setActionError(result.error || t('resolutionSaveFailed'));
       } else {
-        setActionSuccess('บันทึกผลการแก้ไข (Resolution) สำเร็จแล้ว');
+        setActionSuccess(t('resolutionSaved'));
         if (result.ticket) {
           setTicket(result.ticket);
         } else {
@@ -352,7 +321,7 @@ export default function TicketDetailPage() {
         }
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกผลการแก้ไข');
+      setActionError(err instanceof Error ? err.message : t('resolutionSaveFailed'));
     } finally {
       setIsSavingResolution(false);
     }
@@ -364,7 +333,7 @@ export default function TicketDetailPage() {
     if (!ticket || !shopId) return;
 
     if (!commentInput.trim()) {
-      setActionError('กรุณากรอกข้อความความคิดเห็น');
+      setActionError(t('commentRequired'));
       return;
     }
 
@@ -380,14 +349,14 @@ export default function TicketDetailPage() {
       });
 
       if (!result.ok) {
-        setActionError(result.error || 'บันทึกความคิดเห็นไม่สำเร็จ');
+        setActionError(result.error || t('commentSaveFailed'));
       } else {
-        setActionSuccess('เพิ่มความคิดเห็นลงในไทม์ไลน์เรียบร้อยแล้ว');
+        setActionSuccess(t('commentSaved'));
         setCommentInput('');
         await loadTicketData();
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกความคิดเห็น');
+      setActionError(err instanceof Error ? err.message : t('commentSaveFailed'));
     } finally {
       setIsAddingComment(false);
     }
@@ -398,7 +367,7 @@ export default function TicketDetailPage() {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
         <header className="bg-slate-900/80 border-b border-slate-800 px-6 py-4">
-          <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
             <Link
               href="/dashboard/tickets"
               className="p-2 rounded-xl bg-slate-800 text-slate-300"
@@ -406,11 +375,12 @@ export default function TicketDetailPage() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="h-6 w-48 bg-slate-800 rounded animate-pulse" />
+            <LanguageToggle />
           </div>
         </header>
         <main className="max-w-6xl mx-auto w-full px-6 py-20 flex-1 flex flex-col items-center justify-center gap-3">
           <RefreshCw className="w-8 h-8 animate-spin text-emerald-400" />
-          <p className="text-sm text-slate-400">กำลังโหลดรายละเอียดเคส...</p>
+          <p className="text-sm text-slate-400">{t('loadTitle')}</p>
         </main>
       </div>
     );
@@ -421,30 +391,33 @@ export default function TicketDetailPage() {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
         <header className="bg-slate-900/80 border-b border-slate-800 px-6 py-4">
-          <div className="max-w-6xl mx-auto flex items-center gap-3">
-            <Link
-              href="/dashboard/tickets"
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <h1 className="font-bold text-lg text-white">รายละเอียดเคส (Ticket Detail)</h1>
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard/tickets"
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="font-bold text-lg text-white">{t('detailTitle')}</h1>
+            </div>
+            <LanguageToggle />
           </div>
         </header>
         <main className="max-w-6xl mx-auto w-full px-6 py-20 flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-4">
             <AlertTriangle className="w-8 h-8" />
           </div>
-          <h2 className="text-lg font-bold text-white mb-2">ไม่พบข้อมูลเคสที่ระบุ</h2>
+          <h2 className="text-lg font-bold text-white mb-2">{t('notFound')}</h2>
           <p className="text-xs text-slate-400 max-w-sm mb-6">
-            รหัสเคสนี้อาจไม่มีอยู่จริงในร้านค้าของคุณ หรือถูกลบออกจากการล้างข้อมูลเก่าแล้ว
+            {t('notFoundSubtitle')}
           </p>
           <Link
             href="/dashboard/tickets"
             className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-all inline-flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            กลับไปหน้ารายการเคส
+            {t('backToListBtn')}
           </Link>
         </main>
       </div>
@@ -469,7 +442,7 @@ export default function TicketDetailPage() {
             <Link
               href="/dashboard/tickets"
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-              title="กลับหน้ารายการเคส"
+              title={t('backToList')}
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
@@ -488,18 +461,18 @@ export default function TicketDetailPage() {
                 {overdue && (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    เกินกำหนด (Overdue)
+                    {t('overdueTitle')}
                   </span>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-1">
                 <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
-                  ID: {ticket.id}
+                  {t('idLabel', { id: ticket.id })}
                   <button
                     type="button"
                     onClick={handleCopyId}
                     className="text-slate-500 hover:text-white p-0.5"
-                    title="คัดลอก Ticket ID"
+                    title="Copy Ticket ID"
                   >
                     {copiedId ? (
                       <Check className="w-3 h-3 text-emerald-400" />
@@ -521,7 +494,7 @@ export default function TicketDetailPage() {
               onClick={() => loadTicketData()}
               disabled={isLoading}
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
-              title="รีเฟรชข้อมูล"
+              title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -530,8 +503,9 @@ export default function TicketDetailPage() {
               className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
             >
               <Plus className="w-4 h-4 text-emerald-400" />
-              รับเคสใหม่
+              {t('newTicketNow')}
             </Link>
+            <LanguageToggle />
           </div>
         </div>
       </header>
@@ -579,14 +553,14 @@ export default function TicketDetailPage() {
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2 text-emerald-400">
                   <FileText className="w-4 h-4" />
-                  <h2 className="text-sm font-bold text-white">รายละเอียดเคส (Case Information)</h2>
+                  <h2 className="text-sm font-bold text-white">{t('caseDetailsSection')}</h2>
                 </div>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getPriorityBadge(
                     ticket.priority
                   )}`}
                 >
-                  ความสำคัญ: {PRIORITY_LABELS[ticket.priority]}
+                  {t('priorityLabel')}: {PRIORITY_LABELS[ticket.priority]}
                 </span>
               </div>
 
@@ -599,17 +573,17 @@ export default function TicketDetailPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-1">
-                  <span className="text-[11px] text-slate-500 font-medium">หมวดหมู่ปัญหา (Category)</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{t('issueCategoryLabel')}</span>
                   <span className="text-xs font-semibold text-slate-200">
-                    {ticket.issueCategory || <span className="text-slate-600 font-normal">ไม่ระบุ</span>}
+                    {ticket.issueCategory || <span className="text-slate-600 font-normal">-</span>}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-1">
-                  <span className="text-[11px] text-slate-500 font-medium">สินค้า / บริการที่เกี่ยวข้อง</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{t('relatedProductLabel')}</span>
                   <span className="text-xs font-semibold text-slate-200">
                     {ticket.relatedProductService || (
-                      <span className="text-slate-600 font-normal">ไม่ระบุ</span>
+                      <span className="text-slate-600 font-normal">-</span>
                     )}
                   </span>
                 </div>
@@ -620,18 +594,18 @@ export default function TicketDetailPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
               <div className="flex items-center gap-2 text-emerald-400 border-b border-slate-800 pb-3">
                 <User className="w-4 h-4" />
-                <h2 className="text-sm font-bold text-white">ข้อมูลลูกค้าและการจอง (Customer & Booking)</h2>
+                <h2 className="text-sm font-bold text-white">{t('customerSection')}</h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-1">
-                  <span className="text-[11px] text-slate-500 font-medium">ชื่อลูกค้า</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{t('customerNameLabel')}</span>
                   <span className="text-xs font-bold text-white">{ticket.customer.name}</span>
                   <span className="text-[10px] text-slate-500 font-mono">{ticket.customerId}</span>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-1">
-                  <span className="text-[11px] text-slate-500 font-medium">เบอร์โทรศัพท์</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{t('customerPhoneLabel')}</span>
                   <div className="flex items-center gap-2">
                     <a
                       href={`tel:${ticket.customer.phone}`}
@@ -644,7 +618,7 @@ export default function TicketDetailPage() {
                       type="button"
                       onClick={handleCopyPhone}
                       className="text-slate-500 hover:text-white p-0.5"
-                      title="คัดลอกเบอร์โทร"
+                      title="Copy Phone"
                     >
                       {copiedPhone ? (
                         <Check className="w-3 h-3 text-emerald-400" />
@@ -659,10 +633,10 @@ export default function TicketDetailPage() {
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-1">
-                  <span className="text-[11px] text-slate-500 font-medium">ช่องทางติดต่อ</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{t('contactChannelLabel')}</span>
                   <span className="text-xs font-semibold text-slate-200">
                     {ticket.customer.contactChannel || (
-                      <span className="text-slate-600 font-normal">ไม่ระบุ</span>
+                      <span className="text-slate-600 font-normal">-</span>
                     )}
                   </span>
                 </div>
@@ -674,7 +648,7 @@ export default function TicketDetailPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" />
-                      เชื่อมโยงกับการจอง (Linked Booking)
+                      {t('bookingIdLabel')}
                     </span>
                     <span className="text-[11px] font-mono text-slate-400">
                       ID: {ticket.bookingRef.bookingId.slice(0, 8)}...
@@ -682,25 +656,25 @@ export default function TicketDetailPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
                     <div>
-                      <span className="text-[10px] text-slate-500 block">บริการ</span>
+                      <span className="text-[10px] text-slate-500 block">{t('relatedProductLabel')}</span>
                       <span className="font-semibold text-slate-200">
                         {ticket.bookingRef.serviceName}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 block">ช่างผู้ให้บริการ</span>
+                      <span className="text-[10px] text-slate-500 block">{t('assigneeLabel')}</span>
                       <span className="font-semibold text-slate-200">
                         {ticket.bookingRef.providerTechnician || '-'}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 block">สาขา</span>
+                      <span className="text-[10px] text-slate-500 block">Branch</span>
                       <span className="font-semibold text-slate-200">
                         {ticket.bookingRef.shopBranch}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 block">วันที่รับบริการ</span>
+                      <span className="text-[10px] text-slate-500 block">{t('receivedAtLabel')}</span>
                       <span className="font-semibold text-slate-200">
                         {formatDateTime(ticket.bookingRef.serviceDate)}
                       </span>
@@ -709,7 +683,7 @@ export default function TicketDetailPage() {
                 </div>
               ) : ticket.bookingId ? (
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between">
-                  <span className="text-slate-400">Booking ID อ้างอิง:</span>
+                  <span className="text-slate-400">{t('bookingIdLabel')}:</span>
                   <span className="font-mono text-slate-200">{ticket.bookingId}</span>
                 </div>
               ) : null}
@@ -722,25 +696,20 @@ export default function TicketDetailPage() {
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle className="w-4 h-4" />
                     <h2 className="text-sm font-bold text-white">
-                      ผลการแก้ไข & ข้อยุติ (Ticket Resolution)
+                      {t('resolutionSaved').replace(' สำเร็จแล้ว', '').replace(' successfully', '')} (Resolution)
                     </h2>
                   </div>
                   {ticket.status === 'Closed' && (
                     <span className="text-[11px] text-slate-400 font-medium">
-                      ปิดเคสเมื่อ: {formatDateTime(ticket.closedAt)}
+                      {t('thDueDate')}: {formatDateTime(ticket.closedAt)}
                     </span>
                   )}
                 </div>
 
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  บันทึกแนวทางการแก้ปัญหา ข้อยุติ หรือผลการชดเชยให้ลูกค้า (จำเป็นต้องมี Resolution
-                  ก่อนจึงจะสามารถกดปิดเคส Closed ได้)
-                </p>
-
                 <form onSubmit={handleSaveResolution} className="flex flex-col gap-3">
                   <textarea
                     rows={4}
-                    placeholder="ระบุข้อสรุปการแก้ไข เช่น เปลี่ยนสินค้าชิ้นใหม่ให้ลูกค้า, นัดตรวจซ้ำเรียบร้อย, คืนเงินค่าบริการ 100%..."
+                    placeholder="Resolution details..."
                     value={resolutionInput}
                     onChange={(e) => setResolutionInput(e.target.value)}
                     disabled={isSavingResolution}
@@ -749,8 +718,8 @@ export default function TicketDetailPage() {
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500">
                       {ticket.resolution
-                        ? '✔️ มีการบันทึกผลการแก้ไขแล้ว สามารถแก้ไขเพิ่มเติมได้'
-                        : '⚠️ ยังไม่มีการบันทึกผลการแก้ไข'}
+                        ? '✔️ Resolution recorded'
+                        : '⚠️ Resolution pending'}
                     </span>
                     <button
                       type="submit"
@@ -758,7 +727,7 @@ export default function TicketDetailPage() {
                       className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      {isSavingResolution ? 'กำลังบันทึก...' : 'บันทึกผลการแก้ไข (Save Resolution)'}
+                      {isSavingResolution ? '...' : t('resolutionSaved').replace(' สำเร็จแล้ว', '')}
                     </button>
                   </div>
                 </form>
@@ -771,23 +740,20 @@ export default function TicketDetailPage() {
                 <div className="flex items-center gap-2 text-emerald-400">
                   <Activity className="w-4 h-4" />
                   <h2 className="text-sm font-bold text-white">
-                    ประวัติกิจกรรม & ไทม์ไลน์ (Timeline & History)
+                    Timeline ({ticket.timeline.length})
                   </h2>
                 </div>
-                <span className="text-xs text-slate-400">
-                  {ticket.timeline.length} รายการกิจกรรม
-                </span>
               </div>
 
               {/* Add Comment Input Form */}
               <form onSubmit={handleAddComment} className="flex flex-col gap-2.5">
                 <label className="text-xs font-semibold text-slate-300">
-                  เพิ่มบันทึก / ความคิดเห็นภายในทีม (Add Internal Note)
+                  Add Internal Note / Comment
                 </label>
                 <div className="flex gap-2">
                   <textarea
                     rows={2}
-                    placeholder="พิมพ์บันทึกหรือข้อความอัปเดต..."
+                    placeholder="..."
                     value={commentInput}
                     onChange={(e) => setCommentInput(e.target.value)}
                     disabled={isAddingComment}
@@ -799,7 +765,6 @@ export default function TicketDetailPage() {
                     className="px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shrink-0"
                   >
                     <Send className="w-4 h-4 text-emerald-400" />
-                    ส่ง
                   </button>
                 </div>
               </form>
@@ -807,7 +772,7 @@ export default function TicketDetailPage() {
               {/* Timeline List */}
               <div className="relative pl-6 flex flex-col gap-4 before:content-[''] before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
                 {ticket.timeline.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-4 italic">ยังไม่มีกิจกรรมในไทม์ไลน์</p>
+                  <p className="text-xs text-slate-500 py-4 italic">-</p>
                 ) : (
                   ticket.timeline.map((entry, idx) => (
                     <div key={entry.id || idx} className="relative flex flex-col gap-1">
@@ -823,7 +788,7 @@ export default function TicketDetailPage() {
                               [{entry.eventType}]
                             </span>
                             {entry.actor && (
-                              <span className="text-slate-400 text-[11px]">โดย {entry.actor}</span>
+                              <span className="text-slate-400 text-[11px]">· {entry.actor}</span>
                             )}
                           </span>
                           <span className="text-[11px] text-slate-500 font-mono">
@@ -848,7 +813,7 @@ export default function TicketDetailPage() {
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Activity className="w-4 h-4 text-emerald-400" />
-                  เปลี่ยนสถานะเคส (Status Workflow)
+                  {t('thStatus')}
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusBadge(
@@ -860,13 +825,9 @@ export default function TicketDetailPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <span className="text-[11px] text-slate-400 font-medium">
-                  สถานะถัดไปที่สามารถเปลี่ยนได้:
-                </span>
-
                 {availableTransitions.length === 0 ? (
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-500 text-center">
-                    ไม่มีสถานะที่สามารถเปลี่ยนได้โดยตรง
+                    -
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
@@ -904,7 +865,7 @@ export default function TicketDetailPage() {
                           </span>
                           {isCloseAction && (
                             <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
-                              ต้องมี Resolution
+                              Resolution required
                             </span>
                           )}
                         </button>
@@ -919,7 +880,7 @@ export default function TicketDetailPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-3">
               <span className="text-xs font-bold text-white flex items-center gap-1.5 border-b border-slate-800 pb-2.5">
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
-                ระดับความสำคัญ (Priority)
+                {t('thPriority')}
               </span>
 
               <div className="grid grid-cols-3 gap-2">
@@ -937,7 +898,7 @@ export default function TicketDetailPage() {
                           : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
                     >
-                      {pr}
+                      {PRIORITY_LABELS[pr]}
                     </button>
                   );
                 })}
@@ -948,14 +909,14 @@ export default function TicketDetailPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-3">
               <span className="text-xs font-bold text-white flex items-center gap-1.5 border-b border-slate-800 pb-2.5">
                 <User className="w-4 h-4 text-indigo-400" />
-                ผู้รับผิดชอบเคส (Assignee)
+                {t('thAssignee')}
               </span>
 
               <form onSubmit={handleAssigneeSubmit} className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="เช่น ช่างสมหมาย, จนท.วิภา"
+                    placeholder={t('assigneePlaceholder')}
                     value={assigneeInput}
                     onChange={(e) => setAssigneeInput(e.target.value)}
                     disabled={isUpdatingAssignee}
@@ -966,13 +927,13 @@ export default function TicketDetailPage() {
                     disabled={isUpdatingAssignee}
                     className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors shrink-0"
                   >
-                    {isUpdatingAssignee ? '...' : 'บันทึก'}
+                    {isUpdatingAssignee ? '...' : 'Save'}
                   </button>
                 </div>
                 <span className="text-[10px] text-slate-500">
                   {ticket.assignedTo
-                    ? `ปัจจุบันมอบหมาย: ${ticket.assignedTo}`
-                    : 'ยังไม่ได้มอบหมายงานให้ผู้ใด (สามารถเว้นว่างเพื่อยกเลิกได้)'}
+                    ? `${t('thAssignee')}: ${ticket.assignedTo}`
+                    : '-'}
                 </span>
               </form>
             </div>
@@ -981,19 +942,19 @@ export default function TicketDetailPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-3">
               <span className="text-xs font-bold text-white flex items-center gap-1.5 border-b border-slate-800 pb-2.5">
                 <Clock className="w-4 h-4 text-sky-400" />
-                กำหนดการ & วันเวลา (SLA & Dates)
+                Timing & SLA
               </span>
 
               <div className="flex flex-col gap-2.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">วันที่รับเรื่อง:</span>
+                  <span className="text-slate-400">{t('thReceivedDate')}:</span>
                   <span className="font-medium text-white">
                     {formatDateTime(ticket.receivedAt)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">วันครบกำหนด (Due):</span>
+                  <span className="text-slate-400">{t('thDueDate')}:</span>
                   <span
                     className={
                       overdue ? 'font-bold text-rose-400' : 'font-medium text-white'
@@ -1005,7 +966,7 @@ export default function TicketDetailPage() {
 
                 {ticket.occurredAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">วันที่เกิดเหตุ:</span>
+                    <span className="text-slate-400">{t('occurredAtLabel')}:</span>
                     <span className="font-medium text-slate-300">
                       {formatDateTime(ticket.occurredAt)}
                     </span>
@@ -1014,7 +975,7 @@ export default function TicketDetailPage() {
 
                 {ticket.closedAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">วันที่ปิดเคส:</span>
+                    <span className="text-slate-400">Closed:</span>
                     <span className="font-medium text-slate-300">
                       {formatDateTime(ticket.closedAt)}
                     </span>
@@ -1022,7 +983,7 @@ export default function TicketDetailPage() {
                 )}
 
                 <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                  <span>สร้างเมื่อ:</span>
+                  <span>Created:</span>
                   <span>{formatDateTime(ticket.createdAt)}</span>
                 </div>
               </div>
@@ -1034,7 +995,7 @@ export default function TicketDetailPage() {
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Paperclip className="w-4 h-4 text-emerald-400" />
-                    ไฟล์แนบ ({ticket.attachments.length})
+                    {t('attachmentsSection')} ({ticket.attachments.length})
                   </span>
                   <span className="text-[10px] text-slate-500">Metadata</span>
                 </div>

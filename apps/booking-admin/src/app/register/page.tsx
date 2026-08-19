@@ -3,22 +3,13 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { LanguageToggle } from '@/components/language-toggle';
 import { 
   Store, Mail, Sparkles, ArrowRight, ArrowLeft, QrCode, CreditCard,
   ShieldCheck, Building, CheckCircle2, Globe
 } from 'lucide-react';
-
-const SUGGESTED_CATEGORIES = [
-  '💈 ร้านตัดผม / บาร์เบอร์',
-  '🚗 คาร์แคร์ / ล้างรถ / เคลือบแก้ว',
-  '💅 ร้านทำเล็บ / ต่อขนตา / สปามือเท้า',
-  '🏥 คลินิกเสริมความงาม / ทันตกรรม',
-  '🧘 สปา / นวดแผนไทย / ดีท็อกซ์',
-  '📸 สตูดิโอถ่ายภาพ / สตูดิโอซ้อมดนตรี',
-  '🏸 สนามแบดมินตัน / สนามฟุตซอล',
-  '🐾 อาบน้ำตัดขนสัตว์เลี้ยง (Pet Grooming)'
-];
 
 const PENDING_REGISTRATION_KEY = 'local-service.pending-owner-registration';
 
@@ -36,6 +27,9 @@ interface PendingRegistration {
 }
 
 function RegisterFormContent() {
+  const t = useTranslations('auth');
+  const tCommon = useTranslations('common');
+  const suggestedCategories = t.raw('suggestedCategories') as string[];
   const router = useRouter();
   const searchParams = useSearchParams();
   const planParam = searchParams.get('plan');
@@ -105,7 +99,7 @@ function RegisterFormContent() {
         registration = JSON.parse(rawRegistration) as PendingRegistration;
       } catch {
         localStorage.removeItem(PENDING_REGISTRATION_KEY);
-        setErrorMessage('ข้อมูลสมัครที่พักไว้เสียหาย กรุณากรอกใหม่อีกครั้ง');
+        setErrorMessage(t('pendingCorrupt'));
         return;
       }
 
@@ -120,14 +114,14 @@ function RegisterFormContent() {
       try {
         await provisionShop(registration);
       } catch (provisionError) {
-        setErrorMessage(provisionError instanceof Error ? provisionError.message : 'สร้างร้านค้าไม่สำเร็จ');
+        setErrorMessage(provisionError instanceof Error ? provisionError.message : t('registerFailed'));
       } finally {
         setIsSubmitting(false);
       }
     };
 
     void resumeProvisioning();
-  }, [provisionShop]);
+  }, [provisionShop, t]);
 
   // Auto generate slug from shop name (handles English & Thai gracefully)
   const handleShopNameChange = (val: string) => {
@@ -208,14 +202,18 @@ function RegisterFormContent() {
         setIsAwaitingEmail(true);
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'สมัครบัญชีหรือสร้างร้านค้าไม่สำเร็จ');
+      setErrorMessage(error instanceof Error ? error.message : t('registerFailed'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
+    <div className="relative min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 font-sans">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
+
       <div className="max-w-2xl w-full space-y-6">
         {/* Top Header Logo */}
         <div className="text-center space-y-2">
@@ -223,25 +221,25 @@ function RegisterFormContent() {
             <Store className="w-4 h-4" />
             Local Service Booking SaaS
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">สมัครสมาชิกร้านค้า & เปิดระบบจองคิว</h1>
-          <p className="text-xs text-slate-400">เริ่มต้นรับจองคิวออนไลน์ ล็อกคิวด้วยมัดจำ PromptPay QR และยิงแจ้งเตือน LINE ให้อัตโนมัติ</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">{t('registerTitle')}</h1>
+          <p className="text-xs text-slate-400">{t('registerSubtitle')}</p>
         </div>
 
         {/* Wizard Stepper Progress Bar */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between text-xs">
           <div className={`flex items-center gap-2 font-semibold ${currentStep >= 1 ? 'text-emerald-400' : 'text-slate-500'}`}>
             <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-xs ${currentStep >= 1 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>1</span>
-            <span className="hidden sm:inline">ข้อมูลร้านค้า</span>
+            <span className="hidden sm:inline">{t('stepShopShort')}</span>
           </div>
           <div className="h-0.5 flex-1 bg-slate-800 mx-3" />
           <div className={`flex items-center gap-2 font-semibold ${currentStep >= 2 ? 'text-emerald-400' : 'text-slate-500'}`}>
             <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-xs ${currentStep >= 2 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>2</span>
-            <span className="hidden sm:inline">เลือกแพ็กเกจ</span>
+            <span className="hidden sm:inline">{t('stepPlanShort')}</span>
           </div>
           <div className="h-0.5 flex-1 bg-slate-800 mx-3" />
           <div className={`flex items-center gap-2 font-semibold ${currentStep >= 3 ? 'text-emerald-400' : 'text-slate-500'}`}>
             <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono font-bold text-xs ${currentStep >= 3 ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>3</span>
-            <span className="hidden sm:inline">ตั้งค่า PromptPay</span>
+            <span className="hidden sm:inline">{t('stepPromptpayTitle')}</span>
           </div>
         </div>
 
@@ -258,20 +256,19 @@ function RegisterFormContent() {
               <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/40">
                 <CheckCircle2 className="w-10 h-10 animate-bounce" />
               </div>
-              <h2 className="text-xl font-bold text-white">ลงทะเบียนสร้างร้านค้าเรียบร้อยแล้ว! 🎉</h2>
-              <p className="text-xs text-slate-400">กำลังนำท่านเข้าสู่หน้าแดชบอร์ดหลังบ้านร้านค้า...</p>
+              <h2 className="text-xl font-bold text-white">{t('registerSuccessTitle')}</h2>
+              <p className="text-xs text-slate-400">{t('registerSuccessSubtitle')}</p>
             </div>
           ) : isAwaitingEmail ? (
             <div className="text-center py-10 space-y-4 animate-fade-in">
               <div className="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto border border-amber-500/40">
                 <Mail className="w-9 h-9" />
               </div>
-              <h2 className="text-xl font-bold text-white">เช็คอีเมลเพื่อยืนยันบัญชี</h2>
+              <h2 className="text-xl font-bold text-white">{t('checkEmailTitle')}</h2>
               <p className="text-xs text-slate-400 leading-relaxed">
-                ส่งลิงก์ยืนยันไปที่ <span className="font-semibold text-white">{ownerEmail}</span> แล้ว<br />
-                เมื่อกดยืนยัน ระบบจะกลับมาหน้านี้และสร้างร้านค้าต่อให้อัตโนมัติ
+                {t('checkEmailBody', { email: ownerEmail })}
               </p>
-              <p className="text-[11px] text-slate-500">ยังไม่พบอีเมล ให้ตรวจโฟลเดอร์ Spam/Junk ก่อน</p>
+              <p className="text-[11px] text-slate-500">{t('checkEmailSpam')}</p>
             </div>
           ) : (
             <form onSubmit={handleNextStep} className="space-y-6">
@@ -280,16 +277,16 @@ function RegisterFormContent() {
                 <div className="space-y-4 animate-fade-in">
                   <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
                     <Building className="w-5 h-5 text-emerald-400" />
-                    ข้อมูลร้านค้าและบัญชีเจ้าของร้าน (Step 1/3)
+                    {t('stepShopTitle')}
                   </h2>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-semibold text-slate-300 block mb-1">ชื่อร้านค้า (Shop Name) *</label>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">{t('shopNameLabel')}</label>
                       <input
                         required
                         type="text"
-                        placeholder="เช่น Good Cuts Barber / สปาขนตาพรีเมียม"
+                        placeholder={t('shopNamePlaceholder')}
                         value={shopName}
                         onChange={(e) => handleShopNameChange(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-bold focus:outline-none focus:border-emerald-500"
@@ -299,8 +296,8 @@ function RegisterFormContent() {
                     {/* URL Slug Editable Input & Live Preview */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                        <span>URL สลักลิงก์ร้านค้า (Shop URL Slug) *</span>
-                        <span className="text-[10px] text-slate-400 font-normal">แก้ไขได้ (ใช้ตัวอักษร a-z, 0-9 และขีดกลาง -)</span>
+                        <span>{t('slugLabel')}</span>
+                        <span className="text-[10px] text-slate-400 font-normal">{t('slugHint')}</span>
                       </label>
                       <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-400 font-mono">
                         <Globe className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
@@ -315,19 +312,19 @@ function RegisterFormContent() {
                         />
                       </div>
                       <p className="text-[10px] text-amber-400/90 font-medium pt-0.5">
-                        💡 หมายเหตุ: URL ใช้ภาษาอังกฤษเพื่อป้องกันการแปลงภาษาผิด
+                        {t('slugNote')}
                       </p>
                     </div>
 
                     {/* FREE-TEXT BUSINESS CATEGORY WITH QUICK SUGGESTION CHIPS */}
                     <div>
                       <label className="text-xs font-semibold text-slate-300 block mb-1">
-                        ประเภทธุรกิจ / หมวดหมู่บริการ <span className="text-emerald-400 font-normal">(Free-text กรอกได้อิสระ ไม่จำกัดประเภท)</span> *
+                        {t('businessCategoryLabel')} <span className="text-emerald-400 font-normal">{t('businessCategoryHint')}</span>
                       </label>
                       <input
                         required
                         type="text"
-                        placeholder="เช่น ร้านตัดผม / คาร์แคร์ / คลินิก / สตูดิโอถ่ายรูป / สนามฟุตซอล"
+                        placeholder={t('businessCategoryPlaceholder')}
                         value={businessCategory}
                         onChange={(e) => setBusinessCategory(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -335,9 +332,9 @@ function RegisterFormContent() {
                       
                       {/* Suggestion Chips */}
                       <div className="mt-2.5 space-y-1">
-                        <span className="text-[10px] text-slate-400 block font-medium">หรือคลิกเลือกหมวดหมู่อย่างไว:</span>
+                        <span className="text-[10px] text-slate-400 block font-medium">{t('businessCategoryQuickPick')}</span>
                         <div className="flex flex-wrap gap-1.5 pt-0.5">
-                          {SUGGESTED_CATEGORIES.map((cat, idx) => (
+                          {suggestedCategories.map((cat, idx) => (
                             <button
                               key={idx}
                               type="button"
@@ -353,11 +350,11 @@ function RegisterFormContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                       <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">ชื่อ-นามสกุล เจ้าของร้าน *</label>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">{t('ownerNameLabel')}</label>
                         <input
                           required
                           type="text"
-                          placeholder="เช่น คุณสมชาย ใจดี"
+                          placeholder={t('ownerNamePlaceholder')}
                           value={ownerName}
                           onChange={(e) => setOwnerName(e.target.value)}
                           className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -365,7 +362,7 @@ function RegisterFormContent() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">เบอร์โทรศัพท์สายตรง *</label>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">{t('ownerPhoneLabel')}</label>
                         <input
                           required
                           type="tel"
@@ -379,7 +376,7 @@ function RegisterFormContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">อีเมลสำหรับล็อกอิน *</label>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">{t('ownerEmailLabel')}</label>
                         <input
                           required
                           type="email"
@@ -391,11 +388,11 @@ function RegisterFormContent() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">รหัสผ่าน (Password) *</label>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">{t('passwordLabel2')}</label>
                         <input
                           required
                           type="password"
-                          placeholder="อย่างน้อย 8 ตัวอักษร"
+                          placeholder={t('passwordPlaceholder')}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -412,12 +409,12 @@ function RegisterFormContent() {
                   <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                     <h2 className="text-base font-bold text-white flex items-center gap-2">
                       <CreditCard className="w-5 h-5 text-emerald-400" />
-                      เลือกแพ็กเกจระบบรับจองคิว (Step 2/3)
+                      {t('stepPlanTitle')}
                     </h2>
 
                     {/* Monthly / Yearly Switch */}
                     <div className="flex items-center gap-2 text-xs">
-                      <span className={`text-[11px] font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500'}`}>รายเดือน</span>
+                      <span className={`text-[11px] font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500'}`}>{t('monthly')}</span>
                       <button
                         type="button"
                         onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
@@ -426,7 +423,7 @@ function RegisterFormContent() {
                         <div className={`w-3.5 h-3.5 bg-emerald-500 rounded-full transition-all ${billingCycle === 'yearly' ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                       <span className={`text-[11px] font-semibold ${billingCycle === 'yearly' ? 'text-amber-400 font-bold' : 'text-slate-500'}`}>
-                        รายปี <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded border border-amber-500/30">ประหยัด 2 เดือน</span>
+                        {t('yearly')} <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded border border-amber-500/30">{t('save2Months')}</span>
                       </span>
                     </div>
                   </div>
@@ -442,15 +439,15 @@ function RegisterFormContent() {
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <h3 className="font-bold text-sm text-white">🎁 Free Trial</h3>
+                        <h3 className="font-bold text-sm text-white">{t('planFreeTitle')}</h3>
                         {selectedPlan === 'free_trial' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
                       </div>
-                      <p className="text-xl font-extrabold text-emerald-400 font-mono">ฟรี 14 วัน</p>
-                      <p className="text-[11px] text-slate-400">เริ่มต้นใช้งานได้ทันที ไม่ต้องกรอกบัตรเครดิต</p>
+                      <p className="text-xl font-extrabold text-emerald-400 font-mono">{t('planFreePrice')}</p>
+                      <p className="text-[11px] text-slate-400">{t('planFreeDesc')}</p>
                       <ul className="text-[10px] space-y-1.5 text-slate-300 border-t border-slate-800/80 pt-2">
-                        <li>✓ รับจองสูงสุด 50 คิว</li>
-                        <li>✓ เพิ่มพนักงานสูงสุด 5 คน</li>
-                        <li>✓ แจ้งเตือนผ่าน LINE กลาง</li>
+                        <li>{t('planFreeQ1')}</li>
+                        <li>{t('planFreeQ2')}</li>
+                        <li>{t('planFreeQ3')}</li>
                       </ul>
                     </div>
 
@@ -464,17 +461,17 @@ function RegisterFormContent() {
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <h3 className="font-bold text-sm text-white">⚡ Basic Starter</h3>
+                        <h3 className="font-bold text-sm text-white">{t('planBasicTitle')}</h3>
                         {selectedPlan === 'basic_490' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
                       </div>
                       <p className="text-xl font-extrabold text-white font-mono">
-                        {billingCycle === 'monthly' ? '฿490' : '฿4,900'} <span className="text-[10px] font-normal text-slate-400">/{billingCycle === 'monthly' ? 'เดือน' : 'ปี'}</span>
+                        {billingCycle === 'monthly' ? '฿490' : '฿4,900'} <span className="text-[10px] font-normal text-slate-400">{billingCycle === 'monthly' ? t('perMonth') : t('perYear')}</span>
                       </p>
-                      <p className="text-[11px] text-slate-400">สำหรับร้านขนาดเล็ก (1-5 คน)</p>
+                      <p className="text-[11px] text-slate-400">{t('planBasicDesc')}</p>
                       <ul className="text-[10px] space-y-1.5 text-slate-300 border-t border-slate-800/80 pt-2">
-                        <li>✓ รับจองสูงสุด 100 คิว/เดือน</li>
-                        <li>✓ เพิ่มพนักงานสูงสุด 5 คน</li>
-                        <li>✓ แจ้งเตือนผ่าน LINE กลาง</li>
+                        <li>{t('planBasicQ1')}</li>
+                        <li>{t('planBasicQ2')}</li>
+                        <li>{t('planBasicQ3')}</li>
                       </ul>
                     </div>
 
@@ -488,16 +485,16 @@ function RegisterFormContent() {
                       }`}
                     >
                       <span className="absolute -top-2.5 right-3 bg-emerald-500 text-slate-950 text-[9px] font-extrabold px-2 py-0.5 rounded-full">
-                        แนะนำ
+                        {t('planProBadge')}
                       </span>
                       <div className="flex justify-between items-center">
-                        <h3 className="font-bold text-sm text-white">🚀 Pro</h3>
+                        <h3 className="font-bold text-sm text-white">{t('planProTitle')}</h3>
                         {selectedPlan === 'pro_990' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
                       </div>
                       <p className="text-xl font-extrabold text-emerald-400 font-mono">
-                        {billingCycle === 'monthly' ? '฿990' : '฿9,900'} <span className="text-[10px] font-normal text-slate-400">/{billingCycle === 'monthly' ? 'เดือน' : 'ปี'}</span>
+                        {billingCycle === 'monthly' ? '฿990' : '฿9,900'} <span className="text-[10px] font-normal text-slate-400">{billingCycle === 'monthly' ? t('perMonth') : t('perYear')}</span>
                       </p>
-                      <p className="text-[11px] text-slate-400">สำหรับร้านหลายช่าง / แบรนด์พรีเมียม</p>
+                      <p className="text-[11px] text-slate-400">{t('planProDesc')}</p>
                       <ul className="text-[10px] space-y-1.5 text-slate-300 border-t border-slate-800/80 pt-2">
                         <li>✓ รับจองสูงสุด 500 คิว/เดือน</li>
                         <li>✓ เพิ่มพนักงานสูงสุด 10 คน</li>
@@ -513,7 +510,7 @@ function RegisterFormContent() {
                 <div className="space-y-4 animate-fade-in">
                   <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
                     <QrCode className="w-5 h-5 text-emerald-400" />
-                    ตั้งค่า PromptPay รับเงินมัดจำ (Step 3/3)
+                    {t('stepPromptpayTitle')} (Step 3/3)
                   </h2>
 
                   <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 text-xs text-slate-300 space-y-1">
@@ -562,7 +559,7 @@ function RegisterFormContent() {
                     className="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-all"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    ย้อนกลับ
+                    {tCommon('back')}
                   </button>
                 ) : (
                   <div />
@@ -574,7 +571,7 @@ function RegisterFormContent() {
                   className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 transition-all ml-auto disabled:opacity-50"
                 >
                   {isSubmitting ? (
-                    'กำลังสร้างร้านค้า...'
+                    tCommon('saving')
                   ) : currentStep === 3 ? (
                     <>
                       ยืนยันสร้างร้านค้า & เข้าสู่แดชบอร์ด
@@ -596,9 +593,18 @@ function RegisterFormContent() {
   );
 }
 
+function RegisterFallback() {
+  const t = useTranslations('common');
+  return (
+    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-xs">
+      {t('loading')}
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-xs">กำลังโหลด...</div>}>
+    <Suspense fallback={<RegisterFallback />}>
       <RegisterFormContent />
     </Suspense>
   );

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   createTicket,
   fetchTicketsByPhone,
@@ -10,24 +11,21 @@ import {
 } from '@/lib/ticket-service';
 import {
   isValidPhone,
-  normalizePhone,
   validateDeadline,
-  PRIORITY_LABELS,
-  STATUS_LABELS,
-  TICKET_TYPE_LABELS,
   type Attachment,
   type NewTicketInput,
   type Priority,
   type Ticket,
   type TicketType,
 } from '@/lib/ticket-domain';
+import { useTicketLabels } from '@/i18n/ticket-i18n';
+import { LanguageToggle } from '@/components/language-toggle';
 import {
   ArrowLeft,
   Calendar,
   Clock,
   User,
   Phone,
-  MessageSquare,
   AlertTriangle,
   Plus,
   Trash2,
@@ -54,6 +52,8 @@ function toLocalDatetimeString(date: Date): string {
 }
 
 export default function NewTicketIntakePage() {
+  const t = useTranslations('tickets');
+  const { STATUS_LABELS, PRIORITY_LABELS, TICKET_TYPE_LABELS } = useTicketLabels();
   const router = useRouter();
   const [shopId, setShopId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,7 +76,6 @@ export default function NewTicketIntakePage() {
   const [relatedProductService, setRelatedProductService] = useState('');
   const [description, setDescription] = useState('');
   const [bookingId, setBookingId] = useState('');
-  const [serviceId, setServiceId] = useState('');
   const [occurredAt, setOccurredAt] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
 
@@ -88,7 +87,6 @@ export default function NewTicketIntakePage() {
 
   // Duplicate Phone History State (Surfaces past tickets without autofill)
   const [phoneHistoryTickets, setPhoneHistoryTickets] = useState<Ticket[]>([]);
-  const [isSearchingPhone, setIsSearchingPhone] = useState(false);
 
   useEffect(() => {
     async function initShop() {
@@ -96,11 +94,11 @@ export default function NewTicketIntakePage() {
         const mem = await getCurrentShopMembership();
         setShopId(mem.shopId);
       } catch (err) {
-        setFormError(err instanceof Error ? err.message : 'ตรวจสอบสิทธิ์ร้านค้าไม่สำเร็จ');
+        setFormError(err instanceof Error ? err.message : t('loadFailed'));
       }
     }
     initShop();
-  }, []);
+  }, [t]);
 
   // When phone changes and is valid, search for duplicate customer tickets
   useEffect(() => {
@@ -110,14 +108,11 @@ export default function NewTicketIntakePage() {
     }
 
     const timer = setTimeout(async () => {
-      setIsSearchingPhone(true);
       try {
         const history = await fetchTicketsByPhone(shopId, customerPhone);
         setPhoneHistoryTickets(history);
       } catch (err) {
         console.error('Error fetching phone history:', err);
-      } finally {
-        setIsSearchingPhone(false);
       }
     }, 400);
 
@@ -155,26 +150,26 @@ export default function NewTicketIntakePage() {
     setFormError('');
 
     if (!shopId) {
-      setFormError('ไม่พบรหัสร้านค้า');
+      setFormError(t('loadFailed'));
       return;
     }
 
     if (!customerPhone.trim() || !customerName.trim() || !title.trim() || !description.trim()) {
-      setFormError('กรุณากรอกข้อมูลที่จำเป็น (*) ให้ครบถ้วน');
+      setFormError(t('requiredFieldsError'));
       return;
     }
 
     if (!isValidPhone(customerPhone)) {
-      setFormError('รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง (ต้องเป็นตัวเลข 9-15 หลัก)');
+      setFormError(t('invalidPhoneError'));
       return;
     }
 
     const deadlineValidation = validateDeadline(receivedAt, dueAt);
     if (!deadlineValidation.valid) {
       if (deadlineValidation.error === 'DUE_BEFORE_RECEIVED') {
-        setFormError('วันครบกำหนดต้องไม่อยู่ก่อนวันที่และเวลารับเรื่อง');
+        setFormError(t('dueBeforeReceivedError'));
       } else {
-        setFormError('รูปแบบวันที่และเวลาไม่ถูกต้อง');
+        setFormError(t('invalidDateTimeError'));
       }
       return;
     }
@@ -195,7 +190,7 @@ export default function NewTicketIntakePage() {
         relatedProductService: relatedProductService.trim() || undefined,
         description: description.trim(),
         bookingId: bookingId.trim() || null,
-        serviceId: serviceId.trim() || null,
+        serviceId: null,
         occurredAt: occurredAt ? new Date(occurredAt).toISOString() : null,
         assignedTo: assignedTo.trim() || null,
         attachments,
@@ -204,14 +199,14 @@ export default function NewTicketIntakePage() {
       const result = await createTicket(shopId, input);
 
       if (!result.ok || !result.ticket) {
-        setFormError(result.error || 'บันทึกเคสไม่สำเร็จ');
+        setFormError(result.error || t('saveFailedError'));
         setIsSubmitting(false);
         return;
       }
 
       router.push(`/dashboard/tickets/${result.ticket.id}`);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกเคส');
+      setFormError(err instanceof Error ? err.message : t('saveErrorGeneric'));
       setIsSubmitting(false);
     }
   };
@@ -225,17 +220,18 @@ export default function NewTicketIntakePage() {
             <Link
               href="/dashboard/tickets"
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-              title="กลับหน้ารายการเคส"
+              title={t('backToList')}
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="font-bold text-lg text-white">บันทึกรับเคสใหม่ (New Case Intake)</h1>
+              <h1 className="font-bold text-lg text-white">{t('newIntakeTitle')}</h1>
               <p className="text-xs text-slate-400">
-                กรอกข้อมูลรับเรื่องปัญหาบริการ นัดตรวจซ้ำ หรือการเคลมสินค้า
+                {t('newIntakeSubtitle')}
               </p>
             </div>
           </div>
+          <LanguageToggle />
         </div>
       </header>
 
@@ -253,13 +249,13 @@ export default function NewTicketIntakePage() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2 text-emerald-400 border-b border-slate-800 pb-3">
               <Clock className="w-4 h-4" />
-              <h2 className="text-sm font-bold text-white">1. วันและเวลารับเรื่อง & ครบกำหนด (Timing)</h2>
+              <h2 className="text-sm font-bold text-white">{t('timingSection')}</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  วันที่และเวลารับเรื่อง *
+                  {t('receivedAtLabel')}
                 </label>
                 <input
                   type="datetime-local"
@@ -272,7 +268,7 @@ export default function NewTicketIntakePage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  วันและเวลาครบกำหนด (Due Date) *
+                  {t('dueAtLabel')}
                 </label>
                 <input
                   type="datetime-local"
@@ -290,35 +286,35 @@ export default function NewTicketIntakePage() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2 text-emerald-400 border-b border-slate-800 pb-3">
               <User className="w-4 h-4" />
-              <h2 className="text-sm font-bold text-white">2. ข้อมูลลูกค้า (Customer Information)</h2>
+              <h2 className="text-sm font-bold text-white">{t('customerSection')}</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  เบอร์โทรศัพท์ลูกค้า *
+                  {t('customerPhoneLabel')}
                 </label>
                 <input
                   type="tel"
                   required
-                  placeholder="เช่น 0812345678"
+                  placeholder={t('customerPhonePlaceholder')}
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
                 <span className="text-[10px] text-slate-500 mt-1 block">
-                  ตัวเลข 9-15 หลัก (ระบบ Normalize อัตโนมัติ)
+                  {t('customerPhoneHint')}
                 </span>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  ชื่อลูกค้า *
+                  {t('customerNameLabel')}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="เช่น คุณสมชาย ใจดี"
+                  placeholder={t('customerNamePlaceholder')}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -327,11 +323,11 @@ export default function NewTicketIntakePage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  ช่องทางติดต่อ (Contact Channel)
+                  {t('contactChannelLabel')}
                 </label>
                 <input
                   type="text"
-                  placeholder="เช่น LINE, โทรศัพท์, หน้าร้าน"
+                  placeholder={t('contactChannelPlaceholder')}
                   value={contactChannel}
                   onChange={(e) => setContactChannel(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -345,11 +341,11 @@ export default function NewTicketIntakePage() {
                 <div className="flex items-center gap-2 font-bold text-xs text-amber-400">
                   <History className="w-4 h-4" />
                   <span>
-                    พบประวัติเคสเดิมของลูกค้ารายนี้ ({phoneHistoryTickets.length} รายการ)
+                    {t('historyFound', { count: phoneHistoryTickets.length })}
                   </span>
                 </div>
                 <p className="text-[11px] text-amber-200/80">
-                  ⚠️ ระบบตรวจพบเบอร์โทรนี้ในประวัติเคสเดิม (ไม่มีการกรอกข้อมูลอัตโนมัติลงฟอร์มเพื่อความถูกต้องในการรับเรื่องใหม่)
+                  {t('historyBody')}
                 </p>
                 <ul className="divide-y divide-amber-500/20 text-xs mt-1">
                   {phoneHistoryTickets.map((ht) => (
@@ -365,7 +361,7 @@ export default function NewTicketIntakePage() {
                         target="_blank"
                         className="text-[11px] text-amber-400 hover:underline flex items-center gap-1 shrink-0"
                       >
-                        ดูเคสเดิม <ExternalLink className="w-3 h-3" />
+                        {t('viewOldCase')} <ExternalLink className="w-3 h-3" />
                       </Link>
                     </li>
                   ))}
@@ -378,17 +374,17 @@ export default function NewTicketIntakePage() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2 text-emerald-400 border-b border-slate-800 pb-3">
               <FileText className="w-4 h-4" />
-              <h2 className="text-sm font-bold text-white">3. รายละเอียดเคส (Case Details)</h2>
+              <h2 className="text-sm font-bold text-white">{t('caseDetailsSection')}</h2>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                หัวข้อเรื่อง (Title) *
+                {t('titleLabel')}
               </label>
               <input
                 type="text"
                 required
-                placeholder="เช่น แอร์ไม่เย็นหลังล้างบริการ 2 วัน, ขอเปลี่ยนไซส์สินค้า"
+                placeholder={t('titlePlaceholder')}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -398,7 +394,7 @@ export default function NewTicketIntakePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  ประเภทเคส (Case Type) *
+                  {t('caseTypeLabel')}
                 </label>
                 <select
                   value={type}
@@ -415,7 +411,7 @@ export default function NewTicketIntakePage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  ระดับความสำคัญ (Priority) *
+                  {t('priorityLabel')}
                 </label>
                 <select
                   value={priority}
@@ -434,11 +430,11 @@ export default function NewTicketIntakePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  หมวดหมู่ปัญหา (Issue Category)
+                  {t('issueCategoryLabel')}
                 </label>
                 <input
                   type="text"
-                  placeholder="เช่น ฝีมือช่าง, คุณภาพอะไหล่, ความสะอาด"
+                  placeholder={t('issueCategoryPlaceholder')}
                   value={issueCategory}
                   onChange={(e) => setIssueCategory(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -447,11 +443,11 @@ export default function NewTicketIntakePage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  สินค้า/บริการที่เกี่ยวข้อง
+                  {t('relatedProductLabel')}
                 </label>
                 <input
                   type="text"
-                  placeholder="เช่น ล้างแอร์อินเวอร์เตอร์ 12000BTU"
+                  placeholder={t('relatedProductPlaceholder')}
                   value={relatedProductService}
                   onChange={(e) => setRelatedProductService(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -461,12 +457,12 @@ export default function NewTicketIntakePage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                รายละเอียดปัญหา (Description) *
+                {t('descriptionLabel')}
               </label>
               <textarea
                 required
                 rows={5}
-                placeholder="ระบุอาการปัญหา วันที่เริ่มพบปัญหา หรือข้อเรียกร้องของลูกค้าโดยละเอียด..."
+                placeholder={t('descriptionPlaceholder')}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 leading-relaxed"
@@ -479,18 +475,18 @@ export default function NewTicketIntakePage() {
             <div className="flex items-center gap-2 text-emerald-400 border-b border-slate-800 pb-3">
               <Calendar className="w-4 h-4" />
               <h2 className="text-sm font-bold text-white">
-                4. ข้อมูลอ้างอิงเพิ่มเติม (Optional References)
+                {t('referencesSection')}
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Booking ID (รหัสการจองที่เกี่ยวข้อง)
+                  {t('bookingIdLabel')}
                 </label>
                 <input
                   type="text"
-                  placeholder="UUID ของ Booking (ถ้ามี)"
+                  placeholder={t('bookingIdPlaceholder')}
                   value={bookingId}
                   onChange={(e) => setBookingId(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -499,11 +495,11 @@ export default function NewTicketIntakePage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  ผู้รับผิดชอบเคส (Assignee)
+                  {t('assigneeLabel')}
                 </label>
                 <input
                   type="text"
-                  placeholder="เช่น ช่างสมหมาย, จนท.วิภา"
+                  placeholder={t('assigneePlaceholder')}
                   value={assignedTo}
                   onChange={(e) => setAssignedTo(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -512,7 +508,7 @@ export default function NewTicketIntakePage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  วันและเวลาที่เกิดเหตุ (Occurred At)
+                  {t('occurredAtLabel')}
                 </label>
                 <input
                   type="datetime-local"
@@ -529,25 +525,25 @@ export default function NewTicketIntakePage() {
             <div className="flex items-center gap-2 text-emerald-400 border-b border-slate-800 pb-3">
               <Paperclip className="w-4 h-4" />
               <h2 className="text-sm font-bold text-white">
-                5. รายการไฟล์แนบ (Attachment Metadata Only)
+                {t('attachmentsSection')}
               </h2>
             </div>
 
             <p className="text-[11px] text-slate-400">
-              * ขอบเขตระบบเก็บเฉพาะข้อมูลชื่อไฟล์ ประเภทไฟล์ และขนาด (Metadata) ไม่มีการจัดเก็บข้อมูลไบนารีในฐานข้อมูล
+              {t('attachmentsNote')}
             </p>
 
             <div className="flex flex-wrap items-center gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
               <input
                 type="text"
-                placeholder="ชื่อไฟล์ (เช่น photo_air_leak.jpg)"
+                placeholder={t('attFileNamePlaceholder')}
                 value={attName}
                 onChange={(e) => setAttName(e.target.value)}
                 className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white min-w-[200px] flex-1 focus:outline-none focus:border-emerald-500"
               />
               <input
                 type="text"
-                placeholder="MIME Type (เช่น image/jpeg)"
+                placeholder={t('attMimePlaceholder')}
                 value={attMime}
                 onChange={(e) => setAttMime(e.target.value)}
                 className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white w-32 focus:outline-none focus:border-emerald-500"
@@ -555,7 +551,7 @@ export default function NewTicketIntakePage() {
               <input
                 type="number"
                 min="0"
-                placeholder="ขนาด (Bytes)"
+                placeholder={t('attSizePlaceholder')}
                 value={attSize}
                 onChange={(e) => setAttSize(e.target.value)}
                 className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white w-28 focus:outline-none focus:border-emerald-500"
@@ -566,14 +562,14 @@ export default function NewTicketIntakePage() {
                 className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white flex items-center gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
-                เพิ่มไฟล์
+                {t('addFile')}
               </button>
             </div>
 
             {attachments.length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-semibold text-slate-300">
-                  ไฟล์ที่บันทึกแล้ว ({attachments.length}):
+                  {t('savedFilesLabel', { count: attachments.length })}
                 </span>
                 <div className="flex flex-col gap-1.5">
                   {attachments.map((att) => (
@@ -608,7 +604,7 @@ export default function NewTicketIntakePage() {
               href="/dashboard/tickets"
               className="px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors"
             >
-              ยกเลิก
+              {t('backToListBtn')}
             </Link>
             <button
               type="submit"
@@ -616,11 +612,11 @@ export default function NewTicketIntakePage() {
               className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
             >
               {isSubmitting ? (
-                <>กำลังบันทึกข้อมูล...</>
+                <>{t('creatingTicket')}</>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  บันทึกและสร้างเคส (Create Ticket)
+                  {t('createTicketBtn')}
                 </>
               )}
             </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   approveBookingDeposit,
   cancelBooking,
@@ -24,6 +25,7 @@ import {
   type DashboardHoliday,
   type DashboardSubscription,
 } from '@/lib/admin-service';
+import { LanguageToggle } from '@/components/language-toggle';
 import { 
   Calendar, Users, DollarSign, Eye, Clock,
   Settings, AlertCircle, Plus, ShieldCheck,
@@ -37,7 +39,6 @@ type Booking = DashboardBooking;
 type StaffMember = DashboardStaff;
 type ServiceItem = DashboardService;
 
-const DAY_NAMES = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 const BOOKING_SITE_URL = (process.env.NEXT_PUBLIC_BOOKING_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 function getBangkokDateString() {
@@ -51,50 +52,55 @@ function getBangkokDateString() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function formatSubscriptionDate(value: string | null) {
-  if (!value) return 'ยังไม่ระบุ';
+function formatSubscriptionDate(value: string | null, locale: string, notSetLabel: string) {
+  if (!value) return notSetLabel;
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'ยังไม่ระบุ';
+  if (Number.isNaN(date.getTime())) return notSetLabel;
 
-  return new Intl.DateTimeFormat('th-TH', {
+  return new Intl.DateTimeFormat(locale === 'th' ? 'th-TH' : 'en-US', {
     timeZone: 'Asia/Bangkok',
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
 }
 
-function getSubscriptionPlanLabel(plan: DashboardSubscription['plan']) {
+function getSubscriptionPlanLabel(plan: DashboardSubscription['plan'], t: ReturnType<typeof useTranslations<'dashboard'>>) {
   switch (plan) {
     case 'basic_490':
-      return 'Basic (฿490/เดือน)';
+      return t('planLabelBasic');
     case 'pro_990':
-      return 'Pro (฿990/เดือน)';
+      return t('planLabelPro');
     default:
-      return 'ทดลองใช้ฟรี';
+      return t('planLabelTrial');
   }
 }
 
-function getSubscriptionStatusDetails(status: DashboardSubscription['status']) {
+function getSubscriptionStatusDetails(status: DashboardSubscription['status'], t: ReturnType<typeof useTranslations<'dashboard'>>) {
   switch (status) {
     case 'active':
-      return { label: 'ใช้งานอยู่', className: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
+      return { label: t('subStatusActive'), className: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
     case 'trialing':
-      return { label: 'กำลังทดลองใช้ฟรี', className: 'text-sky-300 border-sky-500/30 bg-sky-500/10' };
+      return { label: t('subStatusTrialing'), className: 'text-sky-300 border-sky-500/30 bg-sky-500/10' };
     case 'past_due':
-      return { label: 'ชำระเงินค้าง', className: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
+      return { label: t('subStatusPastDue'), className: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
     case 'canceled':
-      return { label: 'ยกเลิกแล้ว', className: 'text-slate-300 border-slate-600 bg-slate-800' };
+      return { label: t('subStatusCanceled'), className: 'text-slate-300 border-slate-600 bg-slate-800' };
     case 'incomplete':
-      return { label: 'ชำระเงินยังไม่สมบูรณ์', className: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
+      return { label: t('subStatusIncomplete'), className: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
     case 'incomplete_expired':
-      return { label: 'รายการชำระเงินหมดอายุ', className: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+      return { label: t('subStatusIncompleteExpired'), className: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
     case 'unpaid':
-      return { label: 'ค้างชำระ', className: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+      return { label: t('subStatusUnpaid'), className: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
   }
 }
 
 export default function AdminDashboard() {
+  const t = useTranslations('dashboard');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const DAY_NAMES = t.raw('dayNames') as string[];
+
   const [activeTab, setActiveTab] = useState<'bookings' | 'schedules' | 'services' | 'staff' | 'settings' | 'billing'>('bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
@@ -117,7 +123,7 @@ export default function AdminDashboard() {
     subscription?.plan === plan && ['active', 'past_due'].includes(subscription.status);
 
   // Shop Profile State
-  const [shopName, setShopName] = useState('กำลังโหลดข้อมูลร้าน...');
+  const [shopName, setShopName] = useState(tCommon('loading'));
   const [shopPhone, setShopPhone] = useState('');
   const [shopAddress, setShopAddress] = useState('');
   const [shopSlug, setShopSlug] = useState('');
@@ -187,13 +193,13 @@ export default function AdminDashboard() {
       setSubscription(data.subscription);
       setBillingLoadError(data.subscriptionError ?? '');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
+      const message = error instanceof Error ? error.message : t('loadFailed');
       setBookingError(message);
       setManagementError(message);
     } finally {
       if (showLoading) setIsBookingsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -220,7 +226,7 @@ export default function AdminDashboard() {
       })
       .catch((error: unknown) => {
         if (!isCurrent) return;
-        const message = error instanceof Error ? error.message : 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
+        const message = error instanceof Error ? error.message : t('loadFailed');
         setBookingError(message);
         setManagementError(message);
       })
@@ -231,7 +237,7 @@ export default function AdminDashboard() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [t]);
 
   const handleApproveSlip = async (bookingId: string) => {
     setMutatingBookingId(bookingId);
@@ -241,7 +247,7 @@ export default function AdminDashboard() {
       setSelectedSlipBooking(null);
       await loadDashboardBookings(false);
     } catch (error) {
-      setBookingError(error instanceof Error ? error.message : 'อนุมัติสลิปไม่สำเร็จ');
+      setBookingError(error instanceof Error ? error.message : t('approveFailed'));
     } finally {
       setMutatingBookingId(null);
     }
@@ -251,11 +257,11 @@ export default function AdminDashboard() {
     setMutatingBookingId(bookingId);
     setBookingError('');
     try {
-      await rejectBookingDeposit(bookingId, 'สลิปไม่ถูกต้องหรือยอดเงินไม่ตรง');
+      await rejectBookingDeposit(bookingId, t('rejectDefaultReason'));
       setSelectedSlipBooking(null);
       await loadDashboardBookings(false);
     } catch (error) {
-      setBookingError(error instanceof Error ? error.message : 'ปฏิเสธสลิปไม่สำเร็จ');
+      setBookingError(error instanceof Error ? error.message : t('rejectFailed'));
     } finally {
       setMutatingBookingId(null);
     }
@@ -272,7 +278,7 @@ export default function AdminDashboard() {
       setCancelReason('');
       await loadDashboardBookings(false);
     } catch (error) {
-      setBookingError(error instanceof Error ? error.message : 'ยกเลิกคิวไม่สำเร็จ');
+      setBookingError(error instanceof Error ? error.message : t('cancelQueueFailed'));
     } finally {
       setMutatingBookingId(null);
     }
@@ -287,7 +293,7 @@ export default function AdminDashboard() {
       const url = await startBillingCheckout(plan);
       window.location.href = url;
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'สร้างลิงก์ชำระเงินไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('upgradeFailed'));
       setMutatingResourceId(null);
     }
   };
@@ -301,7 +307,7 @@ export default function AdminDashboard() {
       const url = await startBillingPortal();
       window.location.href = url;
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'เปิดหน้าจัดการการชำระเงินไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('portalFailed'));
       setMutatingResourceId(null);
     }
   };
@@ -325,7 +331,7 @@ export default function AdminDashboard() {
       setShopSettingsSaved(true);
       setTimeout(() => setShopSettingsSaved(false), 2000);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'บันทึกการตั้งค่าร้านค้าไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('saveShopFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -350,7 +356,7 @@ export default function AdminDashboard() {
       setNewStaffPhone('');
       await loadDashboardBookings(false);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'เพิ่มพนักงานไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('addStaffFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -363,7 +369,7 @@ export default function AdminDashboard() {
       await setStaffActive(staffMember.id, !staffMember.isActive);
       await loadDashboardBookings(false);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'เปลี่ยนสถานะพนักงานไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('toggleStaffFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -380,7 +386,7 @@ export default function AdminDashboard() {
       setSpecialHolidayReason('');
       await loadDashboardBookings(false);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'เพิ่มวันหยุดไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('addHolidayFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -393,7 +399,7 @@ export default function AdminDashboard() {
       await deleteShopHoliday(holidayId);
       await loadDashboardBookings(false);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'ลบวันหยุดไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('deleteHolidayFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -416,7 +422,7 @@ export default function AdminDashboard() {
       await saveStaffWeeklySchedule(schedule.staffId, schedule.days);
       await loadDashboardBookings(false);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'บันทึกตารางเวลาไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('saveScheduleFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -447,7 +453,7 @@ export default function AdminDashboard() {
     if (!shopId || !serviceName.trim()) return;
 
     if (serviceDeposit > servicePrice) {
-      setManagementError('ยอดมัดจำต้องไม่มากกว่าราคาบริการ');
+      setManagementError(t('depositExceedsPrice'));
       return;
     }
 
@@ -472,7 +478,7 @@ export default function AdminDashboard() {
       setEditingService(null);
       await loadDashboardBookings(false);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'บันทึกบริการไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('saveServiceFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -485,7 +491,7 @@ export default function AdminDashboard() {
       await setServiceActive(service.id, !service.isActive);
       await loadDashboardBookings(false);
     } catch (error) {
-      setManagementError(error instanceof Error ? error.message : 'เปลี่ยนสถานะบริการไม่สำเร็จ');
+      setManagementError(error instanceof Error ? error.message : t('toggleServiceFailed'));
     } finally {
       setMutatingResourceId(null);
     }
@@ -501,55 +507,58 @@ export default function AdminDashboard() {
               Q
             </div>
             <div>
-              <h1 className="font-bold text-base text-white">{shopName} Dashboard</h1>
-              <p className="text-[11px] text-slate-400">โทร: {shopPhone || '-'}</p>
+              <h1 className="font-bold text-base text-white">{t('shopNameDashboard', { shopName })}</h1>
+              <p className="text-[11px] text-slate-400">{t('phonePrefix')}{shopPhone || '-'}</p>
             </div>
           </div>
 
-          <nav className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('bookings')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'bookings' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
-            >
-              รายการคิวทั้งหมด
-            </button>
-            <button
-              onClick={() => setActiveTab('schedules')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'schedules' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
-            >
-              เวลา & วันหยุดร้าน
-            </button>
-            <button
-              onClick={() => setActiveTab('staff')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'staff' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
-            >
-              จัดการพนักงาน
-            </button>
-            <button
-              onClick={() => setActiveTab('services')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'services' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
-            >
-              ข้อมูลร้าน & บริการ
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'settings' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
-            >
-              ตั้งค่า PromptPay/LINE
-            </button>
-            <button
-              onClick={() => setActiveTab('billing')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'billing' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-amber-400 hover:text-amber-300'}`}
-            >
-              แพ็กเกจชำระเงิน
-            </button>
-            <a
-              href="/dashboard/tickets"
-              className="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-white"
-            >
-              Tickets
-            </a>
-          </nav>
+          <div className="flex items-center gap-3">
+            <nav className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('bookings')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'bookings' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+              >
+                {t('tabAllBookings')}
+              </button>
+              <button
+                onClick={() => setActiveTab('schedules')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'schedules' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+              >
+                {t('tabSchedules')}
+              </button>
+              <button
+                onClick={() => setActiveTab('staff')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'staff' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+              >
+                {t('tabStaff')}
+              </button>
+              <button
+                onClick={() => setActiveTab('services')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'services' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+              >
+                {t('tabServices')}
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'settings' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+              >
+                {t('tabSettings')}
+              </button>
+              <button
+                onClick={() => setActiveTab('billing')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'billing' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-amber-400 hover:text-amber-300'}`}
+              >
+                {t('tabBilling')}
+              </button>
+              <a
+                href="/dashboard/tickets"
+                className="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-white"
+              >
+                {t('tabTickets')}
+              </a>
+            </nav>
+            <LanguageToggle />
+          </div>
         </div>
       </header>
 
@@ -559,31 +568,31 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
             <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium">คิวจองวันนี้ ({todayStr})</span>
+              <span className="text-xs font-medium">{t('statToday', { date: todayStr })}</span>
               <Calendar className="w-4 h-4 text-emerald-400" />
             </div>
-            <p className="text-2xl font-bold text-white">{totalToday} รายการ</p>
+            <p className="text-2xl font-bold text-white">{t('countItems', { count: totalToday })}</p>
           </div>
 
           <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4">
             <div className="flex items-center justify-between text-emerald-400 mb-2">
-              <span className="text-xs font-medium">คิวจองล่วงหน้าทั้งหมด</span>
+              <span className="text-xs font-medium">{t('statUpcoming')}</span>
               <Clock className="w-4 h-4 text-emerald-400" />
             </div>
-            <p className="text-2xl font-bold text-emerald-400">{totalUpcoming} รายการ</p>
+            <p className="text-2xl font-bold text-emerald-400">{t('countItems', { count: totalUpcoming })}</p>
           </div>
 
           <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-4">
             <div className="flex items-center justify-between text-amber-400 mb-2">
-              <span className="text-xs font-medium">รอตรวจสลิปมัดจำ</span>
+              <span className="text-xs font-medium">{t('statPendingSlip')}</span>
               <AlertCircle className="w-4 h-4" />
             </div>
-            <p className="text-2xl font-bold text-amber-400">{pendingDeposit} รายการ</p>
+            <p className="text-2xl font-bold text-amber-400">{t('countItems', { count: pendingDeposit })}</p>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
             <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium">ยอดมัดจำรวมที่โอนแล้ว</span>
+              <span className="text-xs font-medium">{t('statDepositCollected')}</span>
               <DollarSign className="w-4 h-4 text-emerald-400" />
             </div>
             <p className="text-2xl font-bold text-white font-mono">฿{depositCollected}.00</p>
@@ -597,15 +606,15 @@ export default function AdminDashboard() {
               <div role="alert" className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
                 <span>{bookingError}</span>
                 <button onClick={() => void loadDashboardBookings()} className="rounded-lg border border-rose-500/40 px-3 py-1 font-bold hover:bg-rose-500/10">
-                  ลองใหม่
+                  {t('retry')}
                 </button>
               </div>
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div>
-                <h2 className="text-base font-bold text-white">ตารางจองคิวงาน & ตรวจสอบสลิป</h2>
-                <p className="text-xs text-slate-400">ดูคิวงานล่วงหน้า กรองคิวตามวัน และอนุมัติสลิปมัดจำจากลูกค้า</p>
+                <h2 className="text-base font-bold text-white">{t('bookingsTitle')}</h2>
+                <p className="text-xs text-slate-400">{t('bookingsSubtitle')}</p>
               </div>
 
               {/* Date View Filters */}
@@ -615,19 +624,19 @@ export default function AdminDashboard() {
                     onClick={() => setBookingFilter('all')}
                     className={`px-2.5 py-1 rounded-lg font-medium ${bookingFilter === 'all' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400'}`}
                   >
-                    คิวทั้งหมด ({bookings.length})
+                    {t('filterAll', { count: bookings.length })}
                   </button>
                   <button
                     onClick={() => setBookingFilter('today')}
                     className={`px-2.5 py-1 rounded-lg font-medium ${bookingFilter === 'today' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400'}`}
                   >
-                    คิววันนี้ ({totalToday})
+                    {t('filterToday', { count: totalToday })}
                   </button>
                   <button
                     onClick={() => setBookingFilter('upcoming')}
                     className={`px-2.5 py-1 rounded-lg font-medium ${bookingFilter === 'upcoming' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400'}`}
                   >
-                    คิวล่วงหน้า ({totalUpcoming})
+                    {t('filterUpcoming', { count: totalUpcoming })}
                   </button>
                 </div>
 
@@ -637,7 +646,7 @@ export default function AdminDashboard() {
                   rel="noreferrer"
                   className="bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 px-3 py-2 rounded-xl flex items-center gap-1.5 border border-slate-700 font-medium"
                 >
-                  หน้าจองลูกค้า
+                  {t('customerBookingPage')}
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -647,26 +656,26 @@ export default function AdminDashboard() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-300 uppercase text-xs tracking-wider font-bold">
-                    <th className="py-3.5 px-4">รหัสคิว / ลูกค้า</th>
-                    <th className="py-3.5 px-4">บริการที่เลือก</th>
-                    <th className="py-3.5 px-4">พนักงานให้บริการ</th>
-                    <th className="py-3.5 px-4">วันที่นัดหมาย</th>
-                    <th className="py-3.5 px-4">เวลานัด</th>
-                    <th className="py-3.5 px-4">ยอดมัดจำ</th>
-                    <th className="py-3.5 px-4">สถานะ</th>
-                    <th className="py-3.5 px-4 text-right">การจัดการ</th>
+                    <th className="py-3.5 px-4">{t('thBookingCode')}</th>
+                    <th className="py-3.5 px-4">{t('thService')}</th>
+                    <th className="py-3.5 px-4">{t('thStaff')}</th>
+                    <th className="py-3.5 px-4">{t('thDate')}</th>
+                    <th className="py-3.5 px-4">{t('thTime')}</th>
+                    <th className="py-3.5 px-4">{t('thDeposit')}</th>
+                    <th className="py-3.5 px-4">{t('thStatus')}</th>
+                    <th className="py-3.5 px-4 text-right">{t('thActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-sm">
                   {isBookingsLoading && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">กำลังโหลดข้อมูลคิวจริง...</td>
+                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">{t('loadingBookings')}</td>
                     </tr>
                   )}
 
                   {!isBookingsLoading && !bookingError && filteredBookings.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">ยังไม่มีคิวในช่วงที่เลือก</td>
+                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-slate-400">{t('noBookings')}</td>
                     </tr>
                   )}
 
@@ -680,44 +689,44 @@ export default function AdminDashboard() {
                       <td className="py-4 px-4 font-semibold text-slate-200 text-sm">{b.serviceName}</td>
                       <td className="py-4 px-4 text-slate-300 font-medium text-sm">{b.staffName}</td>
                       <td className="py-4 px-4 font-mono font-semibold text-slate-200 text-sm whitespace-nowrap">
-                        {b.date} {b.date === todayStr ? <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-sans ml-1">วันนี้</span> : ''}
+                        {b.date} {b.date === todayStr ? <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-sans ml-1">{t('todayLabel')}</span> : ''}
                       </td>
-                      <td className="py-4 px-4 font-mono text-emerald-300 font-bold text-sm whitespace-nowrap">{b.time} น.</td>
+                      <td className="py-4 px-4 font-mono text-emerald-300 font-bold text-sm whitespace-nowrap">{b.time}{t('timeSuffix')}</td>
                       <td className="py-4 px-4 font-mono font-extrabold text-amber-400 text-base whitespace-nowrap">฿{b.depositPrice}</td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         {b.status === 'hold' && (
                           <span className="bg-sky-500/10 text-sky-300 border border-sky-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
-                            รอโอนมัดจำ
+                            {t('statusHold')}
                           </span>
                         )}
                         {b.status === 'pending_review' && (
                           <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
-                            รอตรวจสลิป
+                            {t('statusPendingReview')}
                           </span>
                         )}
                         {b.status === 'confirmed' && (
                           <span className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
-                            ยืนยันคิวแล้ว
+                            {t('statusConfirmed')}
                           </span>
                         )}
                         {b.status === 'completed' && (
                           <span className="bg-blue-500/10 text-blue-300 border border-blue-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
-                            ให้บริการเสร็จแล้ว
+                            {t('statusCompleted')}
                           </span>
                         )}
                         {b.status === 'cancelled' && (
                           <span className="bg-rose-500/10 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
-                            ยกเลิกแล้ว
+                            {t('statusCancelled')}
                           </span>
                         )}
                         {b.status === 'no_show' && (
                           <span className="bg-purple-500/10 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
-                            ไม่มาตามนัด
+                            {t('statusNoShow')}
                           </span>
                         )}
                         {b.status === 'expired' && (
                           <span className="bg-slate-500/10 text-slate-400 border border-slate-500/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap inline-block shadow-sm">
-                            หมดอายุ
+                            {t('statusExpired')}
                           </span>
                         )}
                       </td>
@@ -730,7 +739,7 @@ export default function AdminDashboard() {
                               className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 shadow-md"
                             >
                               <Eye className="w-4 h-4" />
-                              ดูสลิป & อนุมัติ
+                              {t('viewSlip')}
                             </button>
                           )}
                           {b.status !== 'cancelled' && b.status !== 'completed' && b.status !== 'expired' && (
@@ -741,14 +750,14 @@ export default function AdminDashboard() {
                               }}
                               disabled={mutatingBookingId === b.id}
                               className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1 transition-all"
-                              title="ยกเลิกคิวงานนี้"
+                              title={t('cancelQueue')}
                             >
                               <X className="w-3.5 h-3.5" />
-                              ยกเลิกคิว
+                              {t('cancelQueue')}
                             </button>
                           )}
                           {b.status === 'cancelled' && (
-                            <span className="text-slate-500 text-xs italic">ยกเลิกคิวแล้ว</span>
+                            <span className="text-slate-500 text-xs italic">{t('cancelledNote')}</span>
                           )}
                         </div>
                       </td>
@@ -766,7 +775,7 @@ export default function AdminDashboard() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Clock className="w-5 h-5 text-emerald-400" />
-                เวลาทำงาน & เวลาพักเที่ยงของพนักงานรายบุคคล
+                {t('schedulesTitle')}
               </h2>
 
               {managementError && (
@@ -774,7 +783,7 @@ export default function AdminDashboard() {
               )}
               {shopRole === 'staff' && (
                 <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                  บัญชีพนักงานดูตารางได้เท่านั้น การแก้ตารางของตัวเองจะเปิดใช้หลังระบบเชื่อมบัญชีกับข้อมูลพนักงานแล้ว
+                  {t('scheduleStaffNote')}
                 </p>
               )}
 
@@ -788,7 +797,7 @@ export default function AdminDashboard() {
                   <div key={sch.staffId} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs space-y-3 shadow-md hover:border-slate-700 transition-all">
                     <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
                       <span className="font-bold text-sm text-emerald-400">{sch.staffName}</span>
-                      <span className="text-[10px] text-slate-500">{sch.days.filter((day) => day.isWorkingDay).length} วันทำงาน</span>
+                      <span className="text-[10px] text-slate-500">{t('workingDays', { count: sch.days.filter((day) => day.isWorkingDay).length })}</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {DAY_NAMES.map((dayName, dayOfWeek) => {
@@ -803,18 +812,18 @@ export default function AdminDashboard() {
                     </div>
                     <div className="space-y-3">
                       <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 p-2 text-slate-300">
-                        <span>{DAY_NAMES[selectedDay.dayOfWeek]}เป็นวันทำงาน</span>
+                        <span>{t('isWorkingDay', { day: DAY_NAMES[selectedDay.dayOfWeek] })}</span>
                         <input type="checkbox" checked={selectedDay.isWorkingDay} disabled={!canManageSchedules}
                           onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { isWorkingDay: event.target.checked })} />
                       </label>
                       <div>
-                        <label className="text-[11px] font-semibold text-slate-300 block mb-1">เวลาเข้างาน - เลิกงาน</label>
+                        <label className="text-[11px] font-semibold text-slate-300 block mb-1">{t('workTimeLabel')}</label>
                         <div className="flex items-center gap-1.5">
                           <input type="time" value={selectedDay.workStart} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
                             onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { workStart: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-emerald-500 font-bold"
                           />
-                          <span className="text-slate-500 text-[10px]">ถึง</span>
+                          <span className="text-slate-500 text-[10px]">{t('to')}</span>
                           <input type="time" value={selectedDay.workEnd} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
                             onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { workEnd: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-emerald-500 font-bold"
@@ -824,14 +833,14 @@ export default function AdminDashboard() {
 
                       <div>
                         <label className="text-[11px] font-semibold text-amber-400 block mb-1 flex items-center gap-1">
-                          <Coffee className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> พักเที่ยง/ระหว่างวัน
+                          <Coffee className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /> {t('breakLabel')}
                         </label>
                         <div className="flex items-center gap-1.5">
                           <input type="time" value={selectedDay.breakStart} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
                             onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { breakStart: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-amber-500 font-bold"
                           />
-                          <span className="text-slate-500 text-[10px]">ถึง</span>
+                          <span className="text-slate-500 text-[10px]">{t('to')}</span>
                           <input type="time" value={selectedDay.breakEnd} disabled={!canManageSchedules || !selectedDay.isWorkingDay}
                             onChange={(event) => updateScheduleDay(sch.staffId, selectedDay.dayOfWeek, { breakEnd: event.target.value })}
                             className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white font-mono text-center focus:outline-none focus:border-amber-500 font-bold"
@@ -842,7 +851,7 @@ export default function AdminDashboard() {
                     {canManageSchedules && (
                       <button type="button" onClick={() => handleSaveSchedule(sch)} disabled={mutatingResourceId === sch.staffId}
                         className="w-full rounded-xl bg-emerald-500 py-2 font-bold text-slate-950 disabled:opacity-50">
-                        {mutatingResourceId === sch.staffId ? 'กำลังบันทึก...' : 'บันทึกตารางทั้งสัปดาห์'}
+                        {mutatingResourceId === sch.staffId ? tCommon('saving') : t('saveWeek')}
                       </button>
                     )}
                   </div>
@@ -855,22 +864,22 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   <CalendarOff className="w-5 h-5 text-rose-400" />
-                  กำหนดวันหยุดพิเศษร้านค้า (Special Shop Holidays)
+                  {t('holidaysTitle')}
                 </h2>
-                <p className="text-xs text-slate-400">กำหนดวันหยุดนักขัตฤกษ์หรือวันหยุดเฉพาะกิจของร้านค้าเพื่อปิดไม่ให้ลูกค้าจองในวันดังกล่าว</p>
+                <p className="text-xs text-slate-400">{t('holidaysSubtitle')}</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
                 {/* LEFT COLUMN: ADD HOLIDAY FORM */}
                 <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
                   <span className="text-xs font-bold text-rose-400 flex items-center gap-1.5 border-b border-slate-800 pb-2">
-                    <Plus className="w-4 h-4 text-rose-400" /> เพิ่มวันหยุดพิเศษใหม่
+                    <Plus className="w-4 h-4 text-rose-400" /> {t('addHoliday')}
                   </span>
 
                   <form onSubmit={handleAddHoliday} className="space-y-4">
                     <div>
                       <label className="text-xs text-slate-300 block mb-1 font-semibold">
-                        เลือกวันที่หยุดพิเศษ *
+                        {t('holidayDateLabel')}
                       </label>
                       <input
                         required
@@ -880,15 +889,15 @@ export default function AdminDashboard() {
                         onChange={(e) => setSpecialHolidayDate(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-rose-400 font-bold focus:outline-none focus:border-rose-500"
                       />
-                      <p className="text-[10px] text-rose-400/80 font-mono mt-1">*(ระบุปี ค.ศ. เช่น 2026-08-12)</p>
+                      <p className="text-[10px] text-rose-400/80 font-mono mt-1">{t('holidayDateHint')}</p>
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-300 block mb-1 font-semibold">เหตุผลวันหยุด</label>
+                      <label className="text-xs text-slate-300 block mb-1 font-semibold">{t('holidayReasonLabel')}</label>
                       <input
                         type="text"
                         disabled={shopRole === 'staff'}
-                        placeholder="เช่น วันแม่แห่งชาติ / สัมมนาประจำปี"
+                        placeholder={t('holidayReasonPlaceholder')}
                         value={specialHolidayReason}
                         onChange={(e) => setSpecialHolidayReason(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500 font-medium"
@@ -901,7 +910,7 @@ export default function AdminDashboard() {
                       className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Plus className="w-4 h-4" />
-                      เพิ่มวันหยุดพิเศษ
+                      {t('addHolidayBtn')}
                     </button>
                   </form>
                 </div>
@@ -911,14 +920,14 @@ export default function AdminDashboard() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                       <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <CalendarOff className="w-4 h-4 text-rose-400" /> รายการวันหยุดพิเศษทั้งหมด ({holidaysList.length} วัน)
+                        <CalendarOff className="w-4 h-4 text-rose-400" /> {t('holidayList', { count: holidaysList.length })}
                       </span>
                     </div>
 
                     {holidaysList.length === 0 ? (
                       <div className="text-center py-8 text-slate-500 text-xs">
                         <CalendarOff className="w-8 h-8 mx-auto mb-2 opacity-30 text-rose-400" />
-                        <p>ยังไม่มีวันหยุดพิเศษที่กำหนดไว้</p>
+                        <p>{t('noHolidays')}</p>
                       </div>
                     ) : (
                       <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
@@ -928,13 +937,13 @@ export default function AdminDashboard() {
                               <span className="bg-rose-500/10 text-rose-400 border border-rose-500/30 font-mono font-bold px-2.5 py-1 rounded-lg text-xs">
                                 📅 {h.date}
                               </span>
-                              <span className="text-slate-200 font-semibold">{h.reason || 'ร้านปิดทำการประจำปี'}</span>
+                              <span className="text-slate-200 font-semibold">{h.reason || t('annualCloseDefault')}</span>
                             </div>
                             <button
                               onClick={() => handleDeleteHoliday(h.id)}
                               disabled={shopRole === 'staff' || mutatingResourceId === h.id}
                               className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-all disabled:cursor-not-allowed disabled:opacity-40"
-                              title="ลบวันหยุดนี้"
+                              title={t('deleteHolidayTitle')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -945,7 +954,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <p className="text-[10px] text-slate-500 border-t border-slate-800/80 pt-2">
-                    💡 ระบบจะปิดรับคิวจองในวันที่ระบุไว้ข้างต้นโดยอัตโนมัติในหน้าจองของลูกค้า
+                    {t('holidayAutoClose')}
                   </p>
                 </div>
               </div>
@@ -962,28 +971,28 @@ export default function AdminDashboard() {
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-300 space-y-1">
               <div className="flex items-center gap-2 font-bold text-sm">
                 <Users className="w-4 h-4 text-emerald-400" />
-                หน้าที่ของส่วนจัดการ &quot;พนักงาน&quot;
+                {t('staffSectionTitle')}
               </div>
               <p className="text-slate-300">
-                หน้านี้ใช้สำหรับเพิ่มรายชื่อพนักงานและเปิด/ปิดสถานะพร้อมรับคิว โดยระบบจะนำเฉพาะพนักงานที่เปิดใช้งานไปแสดงในหน้าจองลูกค้า
+                {t('staffSectionSubtitle')}
               </p>
             </div>
 
             {shopRole === 'owner' ? (
             <form onSubmit={handleAddStaff} className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-wrap gap-3 items-end">
               <div className="flex-1 min-w-[180px]">
-                <label className="text-xs text-slate-300 block mb-1">ชื่อพนักงาน *</label>
+                <label className="text-xs text-slate-300 block mb-1">{t('staffNameLabel')}</label>
                 <input
                   required
                   type="text"
-                  placeholder="เช่น ช่างเอก (Master Stylist)"
+                  placeholder={t('staffNamePlaceholder')}
                   value={newStaffName}
                   onChange={(e) => setNewStaffName(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
               <div className="flex-1 min-w-[150px]">
-                <label className="text-xs text-slate-300 block mb-1">เบอร์ติดต่อพนักงาน</label>
+                <label className="text-xs text-slate-300 block mb-1">{t('staffPhoneLabel')}</label>
                 <input
                   type="tel"
                   placeholder="08X-XXX-XXXX"
@@ -998,20 +1007,20 @@ export default function AdminDashboard() {
                 className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow-md"
               >
                 <Plus className="w-4 h-4" />
-                {mutatingResourceId === 'staff-new' ? 'กำลังเพิ่ม...' : 'เพิ่มพนักงานใหม่'}
+                {mutatingResourceId === 'staff-new' ? t('adding') : t('addStaff')}
               </button>
             </form>
             ) : (
-              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">เฉพาะ owner เท่านั้นที่เพิ่มหรือเปลี่ยนสถานะพนักงานได้</p>
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">{t('ownerOnlyStaff')}</p>
             )}
 
             <div className="space-y-3">
-              {staffList.length === 0 && <p className="py-8 text-center text-xs text-slate-500">ยังไม่มีพนักงานในร้าน</p>}
+              {staffList.length === 0 && <p className="py-8 text-center text-xs text-slate-500">{t('noStaff')}</p>}
               {staffList.map((st) => (
                 <div key={st.id} className="flex justify-between items-center bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs">
                   <div>
                     <p className="font-bold text-sm text-white">{st.name}</p>
-                    <p className="text-slate-400 text-[11px]">{st.role} • เบอร์ติดต่อ: {st.phone}</p>
+                    <p className="text-slate-400 text-[11px]">{st.role} {t('contactPrefix')}{st.phone}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -1021,7 +1030,7 @@ export default function AdminDashboard() {
                         st.isActive ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-400'
                       }`}
                     >
-                      {mutatingResourceId === st.id ? 'กำลังบันทึก...' : st.isActive ? 'พร้อมรับคิว' : 'ปิดรับคิวชั่วคราว'}
+                      {mutatingResourceId === st.id ? tCommon('saving') : st.isActive ? t('staffReady') : t('staffOff')}
                     </button>
                   </div>
                 </div>
@@ -1042,9 +1051,9 @@ export default function AdminDashboard() {
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
                     <Store className="w-5 h-5 text-emerald-400" />
-                    จัดการข้อมูลอัตลักษณ์ร้านค้า (Shop Profile Settings)
+                    {t('servicesTitle')}
                   </h2>
-                  <p className="text-xs text-slate-400">แก้ไขชื่อร้าน เบอร์โทร และที่อยู่สำหรับนำไปแสดงในหน้าจองของลูกค้าและใบนัดหมาย LINE Flex Card</p>
+                  <p className="text-xs text-slate-400">{t('servicesSubtitle')}</p>
                 </div>
                 <button
                   type="submit"
@@ -1053,16 +1062,16 @@ export default function AdminDashboard() {
                 >
                   <Save className="w-4 h-4" />
                   {shopRole !== 'owner'
-                    ? 'เฉพาะเจ้าของร้านแก้ไขได้'
+                    ? t('ownerOnlyEdit')
                     : mutatingResourceId === 'shop-settings'
-                      ? 'กำลังบันทึก...'
-                      : shopSettingsSaved ? 'บันทึกเรียบร้อย!' : 'บันทึกข้อมูลร้านค้า'}
+                      ? tCommon('saving')
+                      : shopSettingsSaved ? tCommon('saved') : t('saveShop')}
                 </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">ชื่อร้านค้า (Shop Name) *</label>
+                  <label className="text-slate-300 block mb-1 font-semibold">{t('shopNameLabel')}</label>
                   <input
                     required
                     type="text"
@@ -1074,7 +1083,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold">ที่อยู่ร้านค้า</label>
+                  <label className="text-slate-300 block mb-1 font-semibold">{t('shopAddressLabel')}</label>
                   <input
                     type="text"
                     disabled={shopRole !== 'owner'}
@@ -1085,7 +1094,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-slate-300 block mb-1 font-semibold text-emerald-400">เบอร์โทรสายตรงร้านค้า (Shop Phone) *</label>
+                  <label className="text-slate-300 block mb-1 font-semibold text-emerald-400">{t('shopPhoneLabel')}</label>
                   <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold">
                     <Phone className="w-3.5 h-3.5 text-emerald-400 mr-1.5 flex-shrink-0" />
                     <input
@@ -1104,7 +1113,7 @@ export default function AdminDashboard() {
               <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span className="text-slate-400">ลิงก์หน้าจองออนไลน์ของร้านค้า (Read-only):</span>
+                  <span className="text-slate-400">{t('shopLinkLabel')}</span>
                   <span className="font-mono text-emerald-400 font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
                     {BOOKING_SITE_URL}/book/{shopSlug}
                   </span>
@@ -1115,7 +1124,7 @@ export default function AdminDashboard() {
                   className="bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold px-3 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center gap-1.5 shadow-sm"
                 >
                   {copiedLinkNotice ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedLinkNotice ? 'คัดลอกลิงก์แล้ว!' : 'คัดลอกลิงก์ร้านค้า'}
+                  {copiedLinkNotice ? t('copiedLink') : t('copyLink')}
                 </button>
               </div>
             </form>
@@ -1126,9 +1135,9 @@ export default function AdminDashboard() {
                 <div>
                   <h2 className="text-base font-bold text-white flex items-center gap-2">
                     <Scissors className="w-5 h-5 text-emerald-400" />
-                    รายการบริการ & ยอดมัดจำ PromptPay (Service Offerings)
+                    {t('servicesOfferingTitle')}
                   </h2>
-                  <p className="text-xs text-slate-400">เพิ่ม แก้ไข หรือปิดบริการ พร้อมกำหนดราคา ระยะเวลา และยอดมัดจำที่แสดงในหน้าจองลูกค้า</p>
+                  <p className="text-xs text-slate-400">{t('servicesOfferingSubtitle')}</p>
                 </div>
                 <button
                   onClick={handleOpenAddService}
@@ -1136,7 +1145,7 @@ export default function AdminDashboard() {
                   className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md"
                 >
                   <Plus className="w-4 h-4" />
-                  {shopRole === 'staff' ? 'ไม่มีสิทธิ์แก้บริการ' : 'เพิ่มบริการใหม่'}
+                  {shopRole === 'staff' ? t('noPermissionServices') : t('addService')}
                 </button>
               </div>
 
@@ -1145,16 +1154,16 @@ export default function AdminDashboard() {
                 <form onSubmit={handleSaveService} className="bg-slate-950 border border-emerald-500/40 rounded-2xl p-5 space-y-4 shadow-2xl animate-fade-in">
                   <h3 className="font-bold text-sm text-emerald-400 flex items-center gap-2 border-b border-slate-800 pb-2">
                     {editingService ? <Edit3 className="w-4 h-4 text-emerald-400" /> : <Plus className="w-4 h-4 text-emerald-400" />}
-                    {editingService ? 'แก้ไขรายการบริการ' : 'เพิ่มรายการบริการใหม่'}
+                    {editingService ? t('editServiceTitle') : t('addServiceTitle')}
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <label className="text-slate-300 block mb-1 font-semibold">ชื่อบริการ *</label>
+                      <label className="text-slate-300 block mb-1 font-semibold">{t('serviceNameLabel')}</label>
                       <input
                         required
                         type="text"
-                        placeholder="เช่น ตัดผมชายพรีเมียม + สระเซ็ต"
+                        placeholder={t('serviceNamePlaceholder')}
                         value={serviceName}
                         onChange={(e) => setServiceName(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
@@ -1162,10 +1171,10 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="text-slate-300 block mb-1 font-semibold">รายละเอียดบริการ</label>
+                      <label className="text-slate-300 block mb-1 font-semibold">{t('serviceDescLabel')}</label>
                       <input
                         type="text"
-                        placeholder="อธิบายรายละเอียดสั้นๆ เพื่อให้ลูกค้าเข้าใจ"
+                        placeholder={t('serviceDescPlaceholder')}
                         value={serviceDesc}
                         onChange={(e) => setServiceDesc(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
@@ -1173,7 +1182,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="text-slate-300 block mb-1 font-semibold">ระยะเวลาการให้บริการ (นาที) *</label>
+                      <label className="text-slate-300 block mb-1 font-semibold">{t('serviceDurationLabel')}</label>
                       <input
                         required
                         type="number"
@@ -1186,7 +1195,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="text-slate-300 block mb-1 font-semibold">ราคาบริการทั้งหมด (บาท) *</label>
+                      <label className="text-slate-300 block mb-1 font-semibold">{t('servicePriceLabel')}</label>
                       <input
                         required
                         type="number"
@@ -1202,7 +1211,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div>
-                      <label className="text-slate-300 block mb-1 font-semibold text-amber-400">ยอดเงินมัดจำ PromptPay (บาท) *</label>
+                      <label className="text-slate-300 block mb-1 font-semibold text-amber-400">{t('serviceDepositLabel')}</label>
                       <input
                         required
                         type="number"
@@ -1220,14 +1229,14 @@ export default function AdminDashboard() {
                       onClick={() => setShowServiceForm(false)}
                       className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs"
                     >
-                      ยกเลิก
+                      {tCommon('cancel')}
                     </button>
                     <button
                       type="submit"
                       disabled={mutatingResourceId === (editingService?.id ?? 'service-new')}
                       className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-md"
                     >
-                      {mutatingResourceId === (editingService?.id ?? 'service-new') ? 'กำลังบันทึก...' : editingService ? 'บันทึกการแก้ไข' : 'บันทึกบริการใหม่'}
+                      {mutatingResourceId === (editingService?.id ?? 'service-new') ? tCommon('saving') : editingService ? t('saveChanges') : t('saveService')}
                     </button>
                   </div>
                 </form>
@@ -1235,13 +1244,13 @@ export default function AdminDashboard() {
 
               {/* Service Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {services.length === 0 && <p className="py-8 text-center text-xs text-slate-500 md:col-span-2">ยังไม่มีบริการในร้าน</p>}
+                {services.length === 0 && <p className="py-8 text-center text-xs text-slate-500 md:col-span-2">{t('noServices')}</p>}
                 {services.map((sv) => (
                   <div key={sv.id} className={`bg-slate-950 border rounded-xl p-5 space-y-3 transition-all ${sv.isActive ? 'border-slate-800 hover:border-slate-700' : 'border-slate-800 opacity-60'}`}>
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-bold text-sm text-white">{sv.name}</h3>
-                        {!sv.isActive && <span className="mt-1 inline-block rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-400">ปิดบริการ</span>}
+                        {!sv.isActive && <span className="mt-1 inline-block rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-400">{t('serviceClosed')}</span>}
                         <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{sv.description}</p>
                       </div>
                       <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-mono">
@@ -1251,8 +1260,8 @@ export default function AdminDashboard() {
 
                     <div className="flex items-center justify-between text-xs border-t border-slate-800/80 pt-3">
                       <div className="flex items-center gap-3">
-                        <span className="text-slate-400 flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-500" /> {sv.duration} นาที</span>
-                        <span className="text-amber-400 font-semibold">มัดจำ: ฿{sv.deposit}</span>
+                        <span className="text-slate-400 flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-500" /> {t('durationMinutes', { minutes: sv.duration })}</span>
+                        <span className="text-amber-400 font-semibold">{t('depositPrefix')}฿{sv.deposit}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -1260,7 +1269,7 @@ export default function AdminDashboard() {
                           onClick={() => handleOpenEditService(sv)}
                           disabled={shopRole === 'staff' || mutatingResourceId === sv.id}
                           className="text-slate-400 hover:text-emerald-400 p-1 rounded transition-all"
-                          title="แก้ไขบริการ"
+                          title={t('editServiceTitleBtn')}
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
@@ -1268,7 +1277,7 @@ export default function AdminDashboard() {
                           onClick={() => void handleToggleService(sv)}
                           disabled={shopRole === 'staff' || mutatingResourceId === sv.id}
                           className={`p-1 rounded transition-all ${sv.isActive ? 'text-slate-500 hover:text-rose-400' : 'text-slate-500 hover:text-emerald-400'}`}
-                          title={sv.isActive ? 'ปิดบริการ' : 'เปิดบริการอีกครั้ง'}
+                          title={sv.isActive ? t('serviceOff') : t('serviceOn')}
                         >
                           {sv.isActive ? <Trash2 className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                         </button>
@@ -1291,9 +1300,9 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   <Settings className="w-5 h-5 text-emerald-400" />
-                  ตั้งค่าช่องทางชำระมัดจำ (PromptPay) & LINE OA
+                  {t('settingsTitle')}
                 </h2>
-                <p className="text-xs text-slate-400">กำหนดเลขบัญชี PromptPay รับเงินมัดจำของร้าน และ LINE OA ID ที่แสดงให้ลูกค้าเห็น</p>
+                <p className="text-xs text-slate-400">{t('settingsSubtitle')}</p>
               </div>
               <button
                 type="submit"
@@ -1302,10 +1311,10 @@ export default function AdminDashboard() {
               >
                 <Save className="w-4 h-4" />
                 {shopRole !== 'owner'
-                  ? 'เฉพาะเจ้าของร้านแก้ไขได้'
+                  ? t('ownerOnlyEdit')
                   : mutatingResourceId === 'shop-settings'
-                    ? 'กำลังบันทึก...'
-                    : shopSettingsSaved ? 'บันทึกเรียบร้อย!' : 'บันทึกการตั้งค่า'}
+                    ? tCommon('saving')
+                    : shopSettingsSaved ? tCommon('saved') : t('saveSettings')}
               </button>
             </div>
 
@@ -1317,11 +1326,11 @@ export default function AdminDashboard() {
               <div className="bg-slate-950 border border-emerald-500/30 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
                   <QrCode className="w-5 h-5 text-emerald-400" />
-                  <h3 className="font-bold text-sm text-white">ตั้งค่า PromptPay รับเงินมัดจำ</h3>
+                  <h3 className="font-bold text-sm text-white">{t('settingsPromptpayTitle')}</h3>
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1 font-semibold">เลขพร้อมเพย์ร้านค้า *</label>
+                  <label className="text-xs text-slate-300 block mb-1 font-semibold">{t('promptpayNumberLabel')}</label>
                   <input
                     required
                     type="text"
@@ -1333,7 +1342,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1 font-semibold">ชื่อบัญชีรับโอน *</label>
+                  <label className="text-xs text-slate-300 block mb-1 font-semibold">{t('promptpayNameLabel')}</label>
                   <input
                     required
                     type="text"
@@ -1348,33 +1357,33 @@ export default function AdminDashboard() {
               <div className="bg-slate-950 border border-[#06C755]/30 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
                   <MessageCircle className="w-5 h-5 text-[#06C755]" />
-                  <h3 className="font-bold text-sm text-white">ตั้งค่า LINE Official Account (LINE OA)</h3>
+                  <h3 className="font-bold text-sm text-white">{t('lineOaTitle')}</h3>
                 </div>
 
                 <div>
                   <label className="text-xs text-slate-300 block mb-1 font-semibold">
-                    LINE OA ID ร้านค้า / แฮนเดิลส่วนตัว (Optional)
+                    {t('lineOaIdLabel')}
                   </label>
                   <input
                     type="text"
-                    placeholder="เช่น @goodcutsbarber"
+                    placeholder={t('lineOaPlaceholder')}
                     disabled={shopRole !== 'owner'}
                     value={lineOaId}
                     onChange={(e) => setLineOaId(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-[#06C755] font-bold focus:outline-none focus:border-[#06C755] disabled:opacity-60"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    แสดงบนหน้าเว็บร้านค้าเท่านั้น ยังไม่ใช้ส่งข้อความจริง
+                    {t('lineOaNote')}
                   </p>
                 </div>
 
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 text-xs text-slate-300 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-[11px]">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    ตอนนี้ทุกร้านส่งแจ้งเตือนใบนัดผ่าน LINE กลางของระบบ (@central_booking_oa) เท่านั้น
+                    {t('lineCentralNotice')}
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    การเชื่อม LINE OA ของร้านตัวเอง (Custom Channel) ยังไม่เปิดใช้งาน — อยู่ระหว่างออกแบบวิธีเก็บ Channel Token ฝั่งเซิร์ฟเวอร์อย่างปลอดภัย จะไม่มีการเก็บ Token ไว้ที่ฝั่งเบราว์เซอร์หรือหน้าเว็บนี้เด็ดขาด
+                    {t('lineCentralBody')}
                   </p>
                 </div>
               </div>
@@ -1387,11 +1396,11 @@ export default function AdminDashboard() {
           <div className="space-y-8 max-w-5xl mx-auto">
             <div className="text-center space-y-2">
               <span className="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold">
-                Stripe Billing
+                {t('billingBadge')}
               </span>
-              <h2 className="text-2xl font-extrabold text-white">แพ็กเกจระบบจองคิวบริการร้านค้า</h2>
+              <h2 className="text-2xl font-extrabold text-white">{t('billingTitle')}</h2>
               <p className="text-xs text-slate-400 max-w-xl mx-auto">
-                สถานะสมาชิกด้านล่างอ้างอิงจากข้อมูล Stripe ที่ระบบบันทึกไว้เท่านั้น
+                {t('billingSubtitle')}
               </p>
 
               {shopRole === 'owner' && subscription && (
@@ -1401,7 +1410,7 @@ export default function AdminDashboard() {
                   disabled={mutatingResourceId === 'billing-portal'}
                   className="mt-4 text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {mutatingResourceId === 'billing-portal' ? 'กำลังเปิดหน้าจัดการ...' : 'จัดการการชำระเงิน / ประวัติใบแจ้งหนี้'}
+                  {mutatingResourceId === 'billing-portal' ? t('openingBilling') : t('manageBilling')}
                 </button>
               )}
             </div>
@@ -1411,7 +1420,7 @@ export default function AdminDashboard() {
             )}
             {billingLoadError && (
               <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300 max-w-xl mx-auto text-center">
-                ยังโหลดสถานะสมาชิกไม่ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง
+                {t('billingLoadError')}
               </p>
             )}
 
@@ -1419,44 +1428,44 @@ export default function AdminDashboard() {
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 relative">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-extrabold text-lg text-white">สถานะสมาชิกปัจจุบัน</h3>
-                    <p className="mt-1 text-[11px] text-slate-400">ข้อมูลนี้เห็นได้เฉพาะเจ้าของร้าน</p>
+                    <h3 className="font-extrabold text-lg text-white">{t('subscriptionCurrent')}</h3>
+                    <p className="mt-1 text-[11px] text-slate-400">{t('subscriptionOnlyOwner')}</p>
                   </div>
 
                   {isBookingsLoading ? (
-                    <p className="text-xs text-slate-400">กำลังโหลดข้อมูลสมาชิก...</p>
+                    <p className="text-xs text-slate-400">{t('loadingSubscription')}</p>
                   ) : shopRole !== 'owner' ? (
-                    <p className="rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-400">เฉพาะเจ้าของร้านเท่านั้นที่ดูและจัดการข้อมูลสมาชิกได้</p>
+                    <p className="rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-400">{t('subscriptionOwnerOnlyNote')}</p>
                   ) : subscription ? (
                     <div className="space-y-3 text-xs text-slate-300">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-slate-400">แพ็กเกจ</span>
-                        <span className="font-bold text-white">{getSubscriptionPlanLabel(subscription.plan)}</span>
+                        <span className="text-slate-400">{t('subscriptionPlan')}</span>
+                        <span className="font-bold text-white">{getSubscriptionPlanLabel(subscription.plan, t)}</span>
                       </div>
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-slate-400">สถานะ</span>
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSubscriptionStatusDetails(subscription.status).className}`}>
-                          {getSubscriptionStatusDetails(subscription.status).label}
+                        <span className="text-slate-400">{t('subscriptionStatus')}</span>
+                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getSubscriptionStatusDetails(subscription.status, t).className}`}>
+                          {getSubscriptionStatusDetails(subscription.status, t).label}
                         </span>
                       </div>
                       <div className="border-t border-slate-800 pt-3">
-                        <p className="text-slate-400">สิทธิ์รอบปัจจุบันสิ้นสุด</p>
-                        <p className="mt-1 font-semibold text-white">{formatSubscriptionDate(subscription.currentPeriodEnd)}</p>
+                        <p className="text-slate-400">{t('subscriptionPeriodEnd')}</p>
+                        <p className="mt-1 font-semibold text-white">{formatSubscriptionDate(subscription.currentPeriodEnd, locale, t('subNoDate'))}</p>
                       </div>
                       {subscription.cancelAtPeriodEnd && (
                         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200">
-                          ตั้งค่ายกเลิกเมื่อจบรอบปัจจุบันแล้ว
+                          {t('subscriptionCancelAtEnd')}
                         </p>
                       )}
                       {subscription.status === 'past_due' && (
                         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200">
-                          การชำระเงินล่าสุดไม่สำเร็จ กรุณาตรวจสอบข้อมูลชำระเงินใน Stripe เพื่อรักษาสิทธิ์ใช้งาน
+                          {t('subscriptionPastDue')}
                         </p>
                       )}
                     </div>
                   ) : (
                     <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                      ไม่พบข้อมูลสมาชิกของร้านนี้ในขณะนี้ กรุณาลองรีเฟรช หรือติดต่อผู้ดูแลระบบหากปัญหายังคงอยู่
+                      {t('subscriptionNotFound')}
                     </p>
                   )}
                 </div>
@@ -1466,17 +1475,17 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-extrabold text-lg text-white">⚡ Basic Starter</h3>
-                      <p className="text-[11px] text-slate-400">แพ็กเกจรายเดือน</p>
+                      <h3 className="font-extrabold text-lg text-white">{t('planBasicHeader')}</h3>
+                      <p className="text-[11px] text-slate-400">{t('planBasicMonthly')}</p>
                     </div>
                   </div>
 
                   <div className="text-3xl font-extrabold text-white font-mono">
-                    ฿490 <span className="text-xs font-normal text-slate-400">/เดือน</span>
+                    ฿490 <span className="text-xs font-normal text-slate-400">{locale === 'th' ? '/เดือน' : '/month'}</span>
                   </div>
 
                   <p className="border-t border-slate-800 pt-4 text-xs leading-relaxed text-slate-400">
-                    เลือกผ่าน Stripe Checkout เพื่อเริ่มหรือเปลี่ยนเป็นแพ็กเกจ Basic
+                    {t('planBasicDesc')}
                   </p>
                 </div>
 
@@ -1488,10 +1497,10 @@ export default function AdminDashboard() {
                     className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl text-xs border border-slate-700 transition-all block text-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {mutatingResourceId === 'checkout-basic_490'
-                      ? 'กำลังไปหน้าชำระเงิน...'
+                      ? t('gotoBilling')
                       : isManagedSubscriptionPlan('basic_490')
-                        ? 'แพ็กเกจปัจจุบัน'
-                        : 'เลือกแพ็กเกจ Basic'}
+                        ? t('currentPlan')
+                        : t('chooseBasic')}
                   </button>
                 </div>
               </div>
@@ -1500,17 +1509,17 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-extrabold text-lg text-white">🚀 Pro</h3>
-                      <p className="text-[11px] text-emerald-400 font-medium">แพ็กเกจรายเดือน</p>
+                      <h3 className="font-extrabold text-lg text-white">{t('planProHeader')}</h3>
+                      <p className="text-[11px] text-emerald-400 font-medium">{t('planProMonthly')}</p>
                     </div>
                   </div>
 
                   <div className="text-3xl font-extrabold text-emerald-400 font-mono">
-                    ฿990 <span className="text-xs font-normal text-slate-400">/เดือน</span>
+                    ฿990 <span className="text-xs font-normal text-slate-400">{locale === 'th' ? '/เดือน' : '/month'}</span>
                   </div>
 
                   <p className="border-t border-slate-800 pt-4 text-xs leading-relaxed text-slate-400">
-                    เลือกผ่าน Stripe Checkout เพื่อเริ่มหรือเปลี่ยนเป็นแพ็กเกจ Pro
+                    {t('planProDesc')}
                   </p>
                 </div>
 
@@ -1522,10 +1531,10 @@ export default function AdminDashboard() {
                     className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl text-xs shadow-lg shadow-emerald-950/40 transition-all block text-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {mutatingResourceId === 'checkout-pro_990'
-                      ? 'กำลังไปหน้าชำระเงิน...'
+                      ? t('gotoBilling')
                       : isManagedSubscriptionPlan('pro_990')
-                        ? 'แพ็กเกจปัจจุบัน'
-                        : 'เลือกแพ็กเกจ Pro'}
+                        ? t('currentPlan')
+                        : t('choosePro')}
                   </button>
                 </div>
               </div>
@@ -1534,11 +1543,11 @@ export default function AdminDashboard() {
             <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 text-left space-y-3">
               <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                การชำระค่าสมาชิกผ่าน Stripe
+                {t('stripeFooter')}
               </div>
 
               <p className="text-xs leading-relaxed text-slate-400">
-                การเริ่มแพ็กเกจ จัดการวิธีชำระเงิน และดูใบแจ้งหนี้ดำเนินการผ่าน Stripe Checkout และ Customer Portal เท่านั้น
+                {t('stripeFooterBody')}
               </p>
             </div>
           </div>
@@ -1551,11 +1560,11 @@ export default function AdminDashboard() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl animate-fade-in relative">
             {/* Top Right Close Button */}
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">ตรวจสอบสลิปมัดจำ (#{selectedSlipBooking.bookingCode})</h3>
+              <h3 className="text-base font-bold text-white">{t('slipTitle', { code: selectedSlipBooking.bookingCode })}</h3>
               <button
                 onClick={() => setSelectedSlipBooking(null)}
                 className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all"
-                title="ปิดหน้าต่าง"
+                title={t('slipCloseTitle')}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1565,17 +1574,17 @@ export default function AdminDashboard() {
               {selectedSlipBooking.slipUrl ? (
                 <img src={selectedSlipBooking.slipUrl} alt="Deposit Slip" className="max-h-64 object-contain mx-auto rounded-lg" />
               ) : (
-                <p className="py-10 text-xs text-rose-300">ไม่พบ URL สลิปสำหรับคิวนี้</p>
+                <p className="py-10 text-xs text-rose-300">{t('slipNoUrl')}</p>
               )}
               <div className="mt-2 bg-emerald-500/10 border border-emerald-500/30 p-2 rounded text-[10px] text-emerald-400 font-medium">
-                🛡️ ยอดโอน ฿{selectedSlipBooking.depositPrice}.00 ตรงกับ PromptPay ร้าน
+                {t('slipAmountMatches', { amount: selectedSlipBooking.depositPrice })}
               </div>
             </div>
 
             <div className="text-xs space-y-1 text-slate-300">
-              <p>ลูกค้า: <span className="font-semibold text-white">{selectedSlipBooking.customerName}</span> ({selectedSlipBooking.phone})</p>
-              <p>บริการ: <span className="text-white">{selectedSlipBooking.serviceName}</span></p>
-              <p>ยอดเงินในสลิป: <span className="font-mono font-bold text-emerald-400">฿{selectedSlipBooking.depositPrice}.00</span></p>
+              <p>{t('slipCustomer')}<span className="font-semibold text-white">{selectedSlipBooking.customerName}</span> ({selectedSlipBooking.phone})</p>
+              <p>{t('slipService')}<span className="text-white">{selectedSlipBooking.serviceName}</span></p>
+              <p>{t('slipAmountInSlip')}<span className="font-mono font-bold text-emerald-400">฿{selectedSlipBooking.depositPrice}.00</span></p>
             </div>
 
             <div className="space-y-2 pt-2">
@@ -1585,14 +1594,14 @@ export default function AdminDashboard() {
                   disabled={mutatingBookingId === selectedSlipBooking.id}
                   className="w-1/2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold py-2.5 rounded-xl text-xs transition-all"
                 >
-                  ปฏิเสธสลิป (กลับไปรอโอน 15 นาที)
+                  {t('rejectSlip')}
                 </button>
                 <button
                   onClick={() => handleApproveSlip(selectedSlipBooking.id)}
                   disabled={mutatingBookingId === selectedSlipBooking.id}
                   className="w-1/2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs shadow-lg transition-all"
                 >
-                  อนุมัติ & ยืนยันคิว
+                  {t('approveConfirm')}
                 </button>
               </div>
 
@@ -1601,7 +1610,7 @@ export default function AdminDashboard() {
                 onClick={() => setSelectedSlipBooking(null)}
                 className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold py-2 rounded-xl text-xs transition-all"
               >
-                ปิดหน้าต่าง (ยังไม่กดเลือก)
+                {t('closeNoChoice')}
               </button>
             </div>
           </div>
@@ -1612,14 +1621,14 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-fade-in">
             <div>
-              <h3 className="text-base font-bold text-white">ยกเลิกคิว #{cancelBookingTarget.bookingCode}</h3>
-              <p className="mt-1 text-xs text-slate-400">กรุณาระบุเหตุผล ร้านค้าต้องจัดการเรื่องคืนเงินมัดจำเองหากจำเป็น</p>
+              <h3 className="text-base font-bold text-white">{t('cancelTitle', { code: cancelBookingTarget.bookingCode })}</h3>
+              <p className="mt-1 text-xs text-slate-400">{t('cancelSubtitle')}</p>
             </div>
 
             <textarea
               value={cancelReason}
               onChange={(event) => setCancelReason(event.target.value)}
-              placeholder="เช่น ร้านปิดฉุกเฉิน / ลูกค้าโทรขอยกเลิก"
+              placeholder={t('cancelPlaceholder')}
               rows={4}
               className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-white outline-none focus:border-rose-500"
             />
@@ -1634,7 +1643,7 @@ export default function AdminDashboard() {
                 disabled={mutatingBookingId === cancelBookingTarget.id}
                 className="w-1/2 rounded-xl border border-slate-700 bg-slate-800 py-2.5 text-xs font-semibold text-slate-300 disabled:opacity-50"
               >
-                กลับ
+                {t('cancelBack')}
               </button>
               <button
                 type="button"
@@ -1642,7 +1651,7 @@ export default function AdminDashboard() {
                 disabled={!cancelReason.trim() || mutatingBookingId === cancelBookingTarget.id}
                 className="w-1/2 rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {mutatingBookingId === cancelBookingTarget.id ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกคิว'}
+                {mutatingBookingId === cancelBookingTarget.id ? t('cancelConfirming') : t('cancelConfirm')}
               </button>
             </div>
           </div>
