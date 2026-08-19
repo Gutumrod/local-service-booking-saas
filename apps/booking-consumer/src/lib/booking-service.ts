@@ -79,6 +79,10 @@ export interface HoldResponse {
   staff_id: string;
 }
 
+export interface CreateBookingHoldMessages {
+  shopBlocked: string;
+}
+
 export async function getShopBySlug(slug: string): Promise<Shop | null> {
   // shop_public_profile exposes only customer-facing columns (name, phone,
   // address, PromptPay, LINE OA ID, deposit config) and already filters to
@@ -153,7 +157,10 @@ export async function getShopAvailability(shopId: string): Promise<ShopAvailabil
   };
 }
 
-export async function createBookingHold(params: CreateHoldParams): Promise<HoldResponse> {
+export async function createBookingHold(
+  params: CreateHoldParams,
+  messages?: CreateBookingHoldMessages,
+): Promise<HoldResponse> {
   const { data, error } = await supabase.rpc('create_booking_hold', {
     p_shop_id: params.shop_id,
     p_service_id: params.service_id,
@@ -169,7 +176,7 @@ export async function createBookingHold(params: CreateHoldParams): Promise<HoldR
   if (error) {
     console.error('Error in create_booking_hold RPC:', error);
     if (error.message?.includes('SHOP_NOT_ACCEPTING_ONLINE_BOOKINGS')) {
-      throw new Error('ร้านนี้ไม่รับจองคิวออนไลน์ในขณะนี้');
+      throw new Error(messages?.shopBlocked || 'ร้านนี้ไม่รับจองคิวออนไลน์ในขณะนี้');
     }
     throw new Error(error.message || 'Failed to create booking hold');
   }
@@ -192,7 +199,23 @@ export async function submitDepositSlip(bookingId: string, slipUrl: string, tran
   return data;
 }
 
-export async function uploadDepositSlip(bookingId: string, file: File): Promise<string> {
+export interface UploadDepositSlipMessages {
+  unsupportedType: string;
+  tooLarge: string;
+  urlFailed: string;
+}
+
+const defaultUploadDepositSlipMessages: UploadDepositSlipMessages = {
+  unsupportedType: 'รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP',
+  tooLarge: 'ไฟล์สลิปต้องมีขนาดไม่เกิน 5 MB',
+  urlFailed: 'Failed to create deposit slip URL',
+};
+
+export async function uploadDepositSlip(
+  bookingId: string,
+  file: File,
+  messages: UploadDepositSlipMessages = defaultUploadDepositSlipMessages,
+): Promise<string> {
   const allowedTypes: Record<string, string> = {
     'image/jpeg': 'jpg',
     'image/png': 'png',
@@ -201,10 +224,10 @@ export async function uploadDepositSlip(bookingId: string, file: File): Promise<
   const extension = allowedTypes[file.type];
 
   if (!extension) {
-    throw new Error('รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP');
+    throw new Error(messages.unsupportedType);
   }
   if (file.size > 5 * 1024 * 1024) {
-    throw new Error('ไฟล์สลิปต้องมีขนาดไม่เกิน 5 MB');
+    throw new Error(messages.tooLarge);
   }
 
   const objectPath = `${bookingId}/${crypto.randomUUID()}.${extension}`;
@@ -219,7 +242,7 @@ export async function uploadDepositSlip(bookingId: string, file: File): Promise<
 
   const { data } = supabase.storage.from('deposit-slips').getPublicUrl(objectPath);
   if (!data.publicUrl) {
-    throw new Error('Failed to create deposit slip URL');
+    throw new Error(messages.urlFailed);
   }
 
   return data.publicUrl;
