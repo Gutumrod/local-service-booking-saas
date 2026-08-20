@@ -32,3 +32,15 @@ next-env.d.ts
 
 # supabase CLI local cache
 supabase/.temp/
+
+# agent scratch work (evidence files, one-off scripts/queries) - not repo deliverables
+/*_EVIDENCE.md
+/*_EVIDENCE_SUMMARY.md
+/_*.py
+/_*.sql
+/_*.json
+/_*.log
+/_remote_stmts/
+.playwright-cli/
+.agy-*.md
+**/.agy-*.md
