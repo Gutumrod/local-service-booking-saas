@@ -543,7 +543,7 @@ export default function TicketsHistoryPage() {
               <div className="flex items-center gap-2 text-rose-400">
                 <Trash2 className="w-5 h-5" />
                 <h3 className="text-base font-bold text-white">
-                  ล้างข้อมูลเคสเก่าที่ปิดแล้ว (Retention Cleanup)
+                  {t('retentionModalTitle')}
                 </h3>
               </div>
               <button
@@ -555,14 +555,14 @@ export default function TicketsHistoryPage() {
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed">
-              ฟังก์ชันนี้เป็นคำสั่งแบบ Manual (สองขั้นตอน) สำหรับตรวจสอบและล้างเคสที่อยู่ในสถานะ{' '}
-              <strong className="text-white">Closed (ปิดเคสแล้ว)</strong> ที่มีอายุเกินกำหนดนโยบาย
-              (เช่น 12 เดือน) เพื่อประหยัดพื้นที่ฐานข้อมูล โดยระบบจะไม่มีการลบข้อมูลแบบอัตโนมัติเด็ดขาด
+              {t.rich('retentionModalBody', {
+                strong: (chunks) => <strong className="text-white">{chunks}</strong>,
+              })}
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
               <label className="text-xs text-slate-300 font-medium">
-                เลือกวันที่ตัดรอบ (Cutoff Date):
+                {t('retentionCutoffLabel')}
               </label>
               <input
                 type="date"
@@ -578,7 +578,7 @@ export default function TicketsHistoryPage() {
                 disabled={isRetentionPreviewing}
                 className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition-colors"
               >
-                {isRetentionPreviewing ? 'กำลังตรวจสอบ...' : 'ตรวจสอบรายการที่เข้าเกณฑ์'}
+                {isRetentionPreviewing ? t('retentionPreviewingBtn') : t('retentionPreviewBtn')}
               </button>
             </div>
 
@@ -604,13 +604,13 @@ export default function TicketsHistoryPage() {
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-200">
-                    พบเคสปิดที่เข้าเกณฑ์: {retentionCandidates.length} รายการ
+                    {t('retentionFoundCount', { count: retentionCandidates.length })}
                   </span>
                 </div>
 
                 {retentionCandidates.length === 0 ? (
                   <p className="text-xs text-slate-500 py-4 text-center bg-slate-950 rounded-xl">
-                    ไม่มีเคส Closed ที่ปิดก่อนวันที่ระบุ
+                    {t('retentionNoneFound')}
                   </p>
                 ) : (
                   <>
@@ -622,7 +622,10 @@ export default function TicketsHistoryPage() {
                             <span className="text-slate-500 ml-2">({c.customerName})</span>
                           </div>
                           <div className="text-[11px] text-slate-400 shrink-0">
-                            ปิดเมื่อ: {formatDateTime(c.closedAt)} · แนบ {c.attachmentCount} ไฟล์
+                            {t('retentionClosedAt', {
+                              date: formatDateTime(c.closedAt),
+                              count: c.attachmentCount,
+                            })}
                           </div>
                         </div>
                       ))}
@@ -633,7 +636,7 @@ export default function TicketsHistoryPage() {
                       className="self-end px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5"
                     >
                       <Trash2 className="w-4 h-4" />
-                      เปิดหน้าต่างยืนยันการลบ ({retentionCandidates.length} รายการ)
+                      {t('retentionOpenConfirmBtn', { count: retentionCandidates.length })}
                     </button>
                   </>
                 )}
@@ -645,7 +648,7 @@ export default function TicketsHistoryPage() {
                 onClick={() => setShowRetentionModal(false)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
               >
-                ปิดหน้าต่าง
+                {t('retentionCloseModal')}
               </button>
             </div>
           </div>
@@ -658,18 +661,24 @@ export default function TicketsHistoryPage() {
           <div className="bg-slate-900 border border-rose-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
             <div className="flex items-center gap-2.5 text-rose-400">
               <ShieldAlert className="w-6 h-6" />
-              <h3 className="text-base font-bold text-white">ยืนยันการลบข้อมูลถาวร</h3>
+              <h3 className="text-base font-bold text-white">{t('retentionConfirmTitle')}</h3>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              การดำเนินการนี้จะลบเคสที่ปิดแล้วจำนวน{' '}
-              <strong className="text-rose-400 font-bold">{retentionCandidates?.length || 0}</strong>{' '}
-              รายการออกจากฐานข้อมูลอย่างถาวรและไม่สามารถกู้คืนได้
+              {t.rich('retentionConfirmBody', {
+                count: retentionCandidates?.length || 0,
+                strong: (chunks) => <strong className="text-rose-400 font-bold">{chunks}</strong>,
+              })}
             </p>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] text-slate-400 font-semibold">
-                พิมพ์คำว่า <span className="text-rose-400 font-bold font-mono">DELETE</span> เพื่อยืนยัน:
+                {t.rich('retentionTypeDeleteLabel', {
+                  deleteWord: 'DELETE',
+                  strong: (chunks) => (
+                    <span className="text-rose-400 font-bold font-mono">{chunks}</span>
+                  ),
+                })}
               </label>
               <input
                 type="text"
@@ -688,14 +697,14 @@ export default function TicketsHistoryPage() {
                 }}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
               >
-                ยกเลิก
+                {t('retentionCancelBtn')}
               </button>
               <button
                 onClick={handleExecuteRetentionDelete}
                 disabled={deleteConfirmationPhrase !== 'DELETE' || isDeleting}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-all"
               >
-                {isDeleting ? 'กำลังลบ...' : 'ยืนยันการลบถาวร'}
+                {isDeleting ? t('retentionDeletingBtn') : t('retentionConfirmDeleteBtn')}
               </button>
             </div>
           </div>

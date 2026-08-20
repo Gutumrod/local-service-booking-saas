@@ -696,7 +696,7 @@ export default function TicketDetailPage() {
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle className="w-4 h-4" />
                     <h2 className="text-sm font-bold text-white">
-                      {t('resolutionSaved').replace(' สำเร็จแล้ว', '').replace(' successfully', '')} (Resolution)
+                      {t('resolutionTitle')}
                     </h2>
                   </div>
                   {ticket.status === 'Closed' && (
@@ -727,7 +727,7 @@ export default function TicketDetailPage() {
                       className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      {isSavingResolution ? '...' : t('resolutionSaved').replace(' สำเร็จแล้ว', '')}
+                      {isSavingResolution ? '...' : t('resolutionSaved')}
                     </button>
                   </div>
                 </form>
